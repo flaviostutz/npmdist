@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "",
   "main": "dist/index.js",
+  "bin": "dist/main.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist/**",
@@ -25,6 +26,7 @@
     "@babel/preset-typescript": "^7.21.0",
     "@stutzlab/eslint-config": "^3.1.1",
     "@tsconfig/node20": "^20.1.4",
+    "@types/archiver": "^6.0.2",
     "@types/jest": "^29.4.0",
     "@types/node": "^20.14.8",
     "esbuild-jest": "^0.5.0",
@@ -33,6 +35,7 @@
     "typescript": "^5.5.4"
   },
   "dependencies": {
+    "archiver": "^6.0.2",
     "esbuild": "^0.25.9"
   },
   "publishConfig": {

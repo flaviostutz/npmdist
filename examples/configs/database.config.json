@@ -1,0 +1,8 @@
+{
+  "host": "localhost",
+  "port": 5432,
+  "database": "example_db",
+  "poolSize": 10,
+  "connectionTimeout": 30000,
+  "enableLogging": false
+}

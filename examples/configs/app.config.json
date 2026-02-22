@@ -1,0 +1,12 @@
+{
+  "appName": "Example App",
+  "version": "1.0.0",
+  "environment": "production",
+  "features": {
+    "authentication": true,
+    "analytics": true,
+    "notifications": true
+  },
+  "maxRetries": 3,
+  "timeout": 5000
+}

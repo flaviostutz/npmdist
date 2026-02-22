@@ -1,24 +1,16 @@
 {
-  "name": "examples",
-  "version": "0.0.1",
-  "description": "Examples for the lib",
-  "packageManager": "pnpm@8.9.0",
-  "scripts": {},
-  "author": "flaviostutz",
-  "license": "MIT",
-  "devDependencies": {
-    "@stutzlab/eslint-config": "^3.1.1",
-    "@tsconfig/node20": "^20.1.4",
-    "@types/jest": "^29.4.0",
-    "@types/node": "^20.14.8",
-    "esbuild-jest": "^0.5.0",
-    "eslint": "^8.56.0",
-    "jest": "^29.4.2",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.5.4"
-  },
+  "name": "example-files-package",
+  "version": "1.0.0",
+  "description": "Example files package for folder-publisher demonstration",
   "dependencies": {
-    "folder-publisher": "file:../lib/dist/folder-publisher-0.0.1.tgz",
-    "esbuild": "^0.25.9"
-  }
+    "folder-publisher": "file:../lib/dist/folder-publisher-0.0.1.tgz"
+  },
+  "packageManager": "pnpm@10.14.0+sha512.ad27a79641b49c3e481a16a805baa71817a04bbe06a38d17e60e2eaee83f6a146c6a688125f5792e48dd5ba30e7da52a5cda4c3992b9ccf333f9ce223af84748",
+  "files": [
+    "docs/**",
+    "data/**",
+    "package.json",
+    "bin/folder-publisher-extract.js"
+  ],
+  "bin": "bin/folder-publisher-extract.js"
 }
