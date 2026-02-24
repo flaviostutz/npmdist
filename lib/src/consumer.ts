@@ -73,7 +73,7 @@ async function installPackage(
   packageManager: 'npm' | 'yarn' | 'pnpm',
   cwd?: string,
 ): Promise<void> {
-  const packageSpec = version ? `${packageName}@${version}` : packageName;
+  const packageSpec = version ? `${packageName}@${version}` : `${packageName}@latest`;
 
   let cmd: string;
   switch (packageManager) {
