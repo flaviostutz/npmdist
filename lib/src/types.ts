@@ -38,11 +38,6 @@ export type ConsumerConfig = FileFilterConfig & {
   packageManager?: 'pnpm' | 'yarn' | 'npm';
 
   /**
-   * Check mode: verify files without modifying
-   */
-  check?: boolean;
-
-  /**
    * Allow creating conflicting files (default: false, will error)
    */
   allowConflicts?: boolean;

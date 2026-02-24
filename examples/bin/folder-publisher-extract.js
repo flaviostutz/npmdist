@@ -13,7 +13,7 @@ async function main() {
   
   // Execute the folder-publisher CLI with this package as the target
   const fpCliPath = require.resolve('folder-publisher/dist/main.js');
-  const command = `node "${fpCliPath}" "${pkg.name}" extract "${process.cwd()}"`;
+  const command = `node "${fpCliPath}" extract --package "${pkg.name}"`;
   
   process.on('uncaughtException', (err) => {
     process.exit(3);

@@ -79,23 +79,16 @@ export async function cli(processArgs: string[]): Promise<number> {
   }
 
   // Consumer commands (extract, check)
-  const packageName = command;
-
-  if (!args[1] || !['extract', 'check'].includes(args[1])) {
-    console.error(
-      `Error: subcommand required after package name. Use 'extract' or 'check'${
-        args[1] ? ` (got '${args[1]}')` : ''
-      }`,
-    );
+  if (!['extract', 'check'].includes(command)) {
+    console.error(`Error: unknown command '${command}'. Use 'init', 'extract', or 'check'`);
     printUsage();
     return 1;
   }
 
-  const subCommand = args[1];
-
   // Parse options
+  let packageName: string | undefined;
   let version: string | undefined;
-  let checkFlag = false;
+  const checkFlag = false;
   let allowConflicts = false;
   let filenamePatterns: string | undefined;
   let contentRegexes: string | undefined;
@@ -104,11 +97,11 @@ export async function cli(processArgs: string[]): Promise<number> {
   // Default patterns (will exclude common files present in packages that are not meant to be extracted normally)
   const defaultPatterns = ['!package.json', '!bin/**', '!README.md', '!node_modules/**'];
 
-  for (let i = 2; i < args.length; i++) {
-    if (args[i] === '--version') {
+  for (let i = 1; i < args.length; i++) {
+    if (args[i] === '--package' || args[i] === '-p') {
+      packageName = args[++i];
+    } else if (args[i] === '--version') {
       version = args[++i];
-    } else if (args[i] === '--check') {
-      checkFlag = true;
     } else if (args[i] === '--allow-conflicts') {
       allowConflicts = true;
     } else if (args[i] === '--files') {
@@ -122,11 +115,16 @@ export async function cli(processArgs: string[]): Promise<number> {
     }
   }
 
+  if (!packageName) {
+    console.error(`Error: --package option is required for '${command}' command`);
+    printUsage();
+    return 1;
+  }
+
   const config: ConsumerConfig = {
     packageName,
     version,
     outputDir: path.resolve(outDir),
-    check: checkFlag,
     allowConflicts,
     filenamePatterns: filenamePatterns ? filenamePatterns.split(',') : defaultPatterns,
     contentRegexes: contentRegexes
@@ -135,13 +133,11 @@ export async function cli(processArgs: string[]): Promise<number> {
         undefined,
   };
 
-  if (subCommand === 'extract') {
+  if (command === 'extract') {
     const installedVersion = getInstalledPackageVersion(config.packageName, config.cwd);
-    if (!installedVersion) {
-      throw new Error(`Failed to determine installed version of package ${config.packageName}`);
-    }
-
-    console.info(`Extracting files from ${config.packageName}@${installedVersion}...`);
+    console.info(
+      `Extracting files from ${config.packageName}${installedVersion ? `@${installedVersion}` : ''}...`,
+    );
 
     const result = await extract(config);
 
@@ -167,7 +163,7 @@ export async function cli(processArgs: string[]): Promise<number> {
     console.log(`\nPackage: ${result.sourcePackage.name}@${result.sourcePackage.version}`);
     return 0;
   }
-  if (subCommand === 'check') {
+  if (command === 'check') {
     console.log(`\nChecking ${packageName}...`);
     const result = await check(config);
 
@@ -203,33 +199,33 @@ function printUsage(): void {
 folder-publisher
 
 Usage:
-  npx folder-publisher <command> [options]
+  npx folder-publisher [init|extract|check] [options]
 
-Commands (Publisher):
-  init --folders <folders>     Initialize publishing configuration with specified folders
+Commands:
+  init                         Initialize publishing configuration
+  extract                      Extract files from a published package
+  check                        Verify if local files are in sync with a package
 
-Commands (Consumer):
-  <package-name> extract [options]   Extract files from published package
-  <package-name> check   [options]   Verify if files are in sync
-
-Publisher Options:
-  --folders <folders>          Comma-separated list of source folders to publish
+Global Options:
   --help, -h                   Show this help message
   --version, -v                Show version
 
-Consumer Options:
+Init Options:
+  --folders <folders>          Comma-separated list of source folders to publish (required)
+
+Extract / Check Options:
+  --package, -p <name>         Package name to extract from (required)
   --version <version>          Version constraint (e.g., "1.0.0", "^1.0.0")
-  --check                      Run in check mode instead of extract
   --allow-conflicts            Allow overwriting existing files
-  --files <pattern>           Comma-separated shell glob patterns
+  --files <pattern>            Comma-separated shell glob patterns
   --content-regex <regex>      Regex pattern to match file contents
   --output, -o <dir>           Output directory (default: current directory)
 
 Examples:
   npx folder-publisher init --folders "data,docs,config"
-  npx mydataset extract --output ./data
-  npx mydataset extract --version "^2.0.0" --output ./data
-  npx mydataset extract --files "*.md,docs/**" --output ./docs
-  npx mydataset check --output ./data
+  npx folder-publisher extract --package mydataset --output ./data
+  npx folder-publisher extract --package mydataset --version "^2.0.0" --output ./data
+  npx folder-publisher extract --package mydataset --files "*.md,docs/**" --output ./docs
+  npx folder-publisher check --package mydataset --output ./data
 `);
 }

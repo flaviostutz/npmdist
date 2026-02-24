@@ -150,31 +150,44 @@ describe('CLI', () => {
         sourcePackage: { name: 'my-pkg', version: '1.0.0' },
       });
 
-      const exitCode = await cli(['node', 'cli.js', 'my-pkg', 'extract', '/output']);
+      const exitCode = await cli(['node', 'cli.js', 'extract', '--package', 'my-pkg', '/output']);
       expect(exitCode).toBe(0);
       expect(mockExtract).toHaveBeenCalled();
     });
 
-    it('should return 1 when no subcommand given after package name', async () => {
+    it('should return 1 when --package flag is missing for extract', async () => {
       mockExtract.mockResolvedValue(defaultExtractResult);
 
-      const exitCode = await cli(['node', 'cli.js', 'my-pkg']);
+      const exitCode = await cli(['node', 'cli.js', 'extract']);
       expect(exitCode).toBe(1);
-      expect(console.error).toHaveBeenCalledWith(expect.stringContaining('subcommand required'));
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining('--package option is required'),
+      );
     });
 
-    it('should return 1 when invalid value given as subcommand', async () => {
+    it('should return 1 for unknown command', async () => {
       mockExtract.mockResolvedValue(defaultExtractResult);
 
-      const exitCode = await cli(['node', 'cli.js', 'my-pkg', '/output']);
+      const exitCode = await cli(['node', 'cli.js', 'unknown-cmd']);
       expect(exitCode).toBe(1);
-      expect(console.error).toHaveBeenCalledWith(expect.stringContaining('subcommand required'));
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining("unknown command 'unknown-cmd'"),
+      );
     });
 
     it('should pass --files flag patterns to extract config', async () => {
       mockExtract.mockResolvedValue(defaultExtractResult);
 
-      await cli(['node', 'cli.js', 'my-pkg', 'extract', '/output', '--files', '**/*.md,**/*.ts']);
+      await cli([
+        'node',
+        'cli.js',
+        'extract',
+        '--package',
+        'my-pkg',
+        '/output',
+        '--files',
+        '**/*.md,**/*.ts',
+      ]);
 
       const config = mockExtract.mock.calls[0][0];
       expect(config.filenamePatterns).toContain('**/*.md');
@@ -184,7 +197,15 @@ describe('CLI', () => {
     it('should pass --allow-conflicts flag to extract config', async () => {
       mockExtract.mockResolvedValue(defaultExtractResult);
 
-      await cli(['node', 'cli.js', 'my-pkg', 'extract', '/output', '--allow-conflicts']);
+      await cli([
+        'node',
+        'cli.js',
+        'extract',
+        '--package',
+        'my-pkg',
+        '/output',
+        '--allow-conflicts',
+      ]);
 
       const config = mockExtract.mock.calls[0][0];
       expect(config.allowConflicts).toBe(true);
@@ -193,7 +214,16 @@ describe('CLI', () => {
     it('should pass --version flag to extract config', async () => {
       mockExtract.mockResolvedValue(defaultExtractResult);
 
-      await cli(['node', 'cli.js', 'my-pkg', 'extract', '/output', '--version', '1.2.x']);
+      await cli([
+        'node',
+        'cli.js',
+        'extract',
+        '--package',
+        'my-pkg',
+        '/output',
+        '--version',
+        '1.2.x',
+      ]);
 
       const config = mockExtract.mock.calls[0][0];
       expect(config.version).toBe('1.2.x');
@@ -202,7 +232,16 @@ describe('CLI', () => {
     it('should pass --content-regex flag to extract config', async () => {
       mockExtract.mockResolvedValue(defaultExtractResult);
 
-      await cli(['node', 'cli.js', 'my-pkg', 'extract', '/output', '--content-regex', 'foo,bar']);
+      await cli([
+        'node',
+        'cli.js',
+        'extract',
+        '--package',
+        'my-pkg',
+        '/output',
+        '--content-regex',
+        'foo,bar',
+      ]);
 
       const config = mockExtract.mock.calls[0][0];
       expect(config.contentRegexes).toHaveLength(2);
@@ -211,7 +250,7 @@ describe('CLI', () => {
     it('should pass --output/-o flag to extract config', async () => {
       mockExtract.mockResolvedValue(defaultExtractResult);
 
-      await cli(['node', 'cli.js', 'my-pkg', 'extract', '-o', '/custom-output']);
+      await cli(['node', 'cli.js', 'extract', '--package', 'my-pkg', '-o', '/custom-output']);
 
       const config = mockExtract.mock.calls[0][0];
       expect(config.outputDir).toContain('custom-output');
@@ -220,7 +259,7 @@ describe('CLI', () => {
     it('should use default filename patterns when --files not specified', async () => {
       mockExtract.mockResolvedValue(defaultExtractResult);
 
-      await cli(['node', 'cli.js', 'my-pkg', 'extract', '/output']);
+      await cli(['node', 'cli.js', 'extract', '--package', 'my-pkg', '/output']);
 
       const config = mockExtract.mock.calls[0][0];
       expect(config.filenamePatterns).toContain('!package.json');
@@ -240,7 +279,7 @@ describe('CLI', () => {
         sourcePackage: { name: 'my-pkg', version: '1.0.0' },
       });
 
-      await cli(['node', 'cli.js', 'my-pkg', 'extract', '/output']);
+      await cli(['node', 'cli.js', 'extract', '--package', 'my-pkg', '/output']);
 
       const allLogs = (console.log as jest.Mock).mock.calls.flat().join('\n');
       expect(allLogs).toContain('file1.md');
@@ -257,7 +296,7 @@ describe('CLI', () => {
         sourcePackage: { name: 'my-pkg', version: '1.0.0' },
       });
 
-      const exitCode = await cli(['node', 'cli.js', 'my-pkg', 'check', '/output']);
+      const exitCode = await cli(['node', 'cli.js', 'check', '--package', 'my-pkg', '/output']);
       expect(exitCode).toBe(0);
     });
 
@@ -268,7 +307,7 @@ describe('CLI', () => {
         sourcePackage: { name: 'my-pkg', version: '1.0.0' },
       });
 
-      const exitCode = await cli(['node', 'cli.js', 'my-pkg', 'check', '/output']);
+      const exitCode = await cli(['node', 'cli.js', 'check', '--package', 'my-pkg', '/output']);
       expect(exitCode).toBe(2);
     });
 
@@ -283,13 +322,21 @@ describe('CLI', () => {
         sourcePackage: { name: 'my-pkg', version: '1.0.0' },
       });
 
-      const exitCode = await cli(['node', 'cli.js', 'my-pkg', 'check', '/output']);
+      const exitCode = await cli(['node', 'cli.js', 'check', '--package', 'my-pkg', '/output']);
       expect(exitCode).toBe(2);
 
       const allLogs = (console.log as jest.Mock).mock.calls.flat().join('\n');
       expect(allLogs).toContain('missing.md');
       expect(allLogs).toContain('modified.md');
       expect(allLogs).toContain('extra.md');
+    });
+
+    it('should return 1 when --package flag is missing for check', async () => {
+      const exitCode = await cli(['node', 'cli.js', 'check']);
+      expect(exitCode).toBe(1);
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining('--package option is required'),
+      );
     });
 
     it('should pass --check flag in config', async () => {
@@ -299,14 +346,8 @@ describe('CLI', () => {
         sourcePackage: { name: 'my-pkg', version: '1.0.0' },
       });
 
-      await cli(['node', 'cli.js', 'my-pkg', 'check', '/output', '--check']);
+      await cli(['node', 'cli.js', 'check', '--package', 'my-pkg', '/output', '--check']);
       expect(mockCheck).toHaveBeenCalled();
     });
-  });
-
-  it('should return 1 for unknown subcommand', async () => {
-    const exitCode = await cli(['node', 'cli.js', 'my-pkg', 'unknown-cmd']);
-    expect(exitCode).toBe(1);
-    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('subcommand required'));
   });
 });
