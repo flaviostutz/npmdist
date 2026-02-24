@@ -10,6 +10,7 @@ import path from 'node:path';
 import { extract, check } from './consumer';
 import { ConsumerConfig } from './types';
 import { initPublisher } from './publisher';
+import { getInstalledPackageVersion } from './utils';
 
 /**
  * CLI for folder-publisher
@@ -135,7 +136,13 @@ export async function cli(processArgs: string[]): Promise<number> {
   };
 
   if (subCommand === 'extract') {
-    console.log(`\nExtracting files from ${packageName}...`);
+    const installedVersion = getInstalledPackageVersion(config.packageName, config.cwd);
+    if (!installedVersion) {
+      throw new Error(`Failed to determine installed version of package ${config.packageName}`);
+    }
+
+    console.info(`Extracting files from ${config.packageName}@${installedVersion}...`);
+
     const result = await extract(config);
 
     console.log(

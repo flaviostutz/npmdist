@@ -3,7 +3,6 @@
 /* eslint-disable no-continue */
 /* eslint-disable functional/immutable-data */
 /* eslint-disable no-restricted-syntax */
-/* eslint-disable no-console */
 import fs from 'node:fs';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
@@ -87,7 +86,6 @@ async function installPackage(
       cmd = `npm install ${packageSpec}`;
   }
 
-  console.log(`Installing ${packageSpec}...`);
   execSync(cmd, { encoding: 'utf8', stdio: 'pipe', cwd });
 }
 
@@ -344,10 +342,6 @@ export async function extract(config: ConsumerConfig): Promise<ConsumerResult> {
     config.version,
     packageManager,
     config.cwd,
-  );
-
-  console.info(
-    `Extracting files from package ${config.packageName}@${installedVersion} (package manager: ${packageManager})`,
   );
 
   const changes = await extractFiles(config);

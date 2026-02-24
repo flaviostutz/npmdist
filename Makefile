@@ -14,7 +14,7 @@ SHELL := /bin/bash
 	@cd examples; STAGE=dev make $@
 
 	@# While building the examples with local lib, pnpm-lock is updated with latest hash of the lib, which creates problems. This can be ignored
-	@cd examples; git reset --hard
+# 	@cd examples; git reset
 
 publish:
 	cd lib; make publish

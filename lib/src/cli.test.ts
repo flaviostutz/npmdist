@@ -11,18 +11,28 @@ jest.mock('./publisher', () => ({
   initPublisher: jest.fn(),
 }));
 
+jest.mock('./utils', () => ({
+  ...jest.requireActual('./utils'),
+  getInstalledPackageVersion: jest.fn(),
+}));
+
 // eslint-disable-next-line import/order, import/first
 import { extract, check } from './consumer';
 // eslint-disable-next-line import/order, import/first
 import { initPublisher } from './publisher';
+// eslint-disable-next-line import/order, import/first
+import { getInstalledPackageVersion } from './utils';
 
 type MockedExtract = jest.MockedFunction<typeof extract>;
 type MockedCheck = jest.MockedFunction<typeof check>;
 type MockedInitPublisher = jest.MockedFunction<typeof initPublisher>;
+type MockedGetInstalledPackageVersion = jest.MockedFunction<typeof getInstalledPackageVersion>;
 
 const mockExtract = extract as MockedExtract;
 const mockCheck = check as MockedCheck;
 const mockInitPublisher = initPublisher as MockedInitPublisher;
+const mockGetInstalledPackageVersion =
+  getInstalledPackageVersion as MockedGetInstalledPackageVersion;
 
 const defaultExtractResult = {
   created: 0,
@@ -38,6 +48,7 @@ describe('CLI', () => {
     jest.spyOn(console, 'log').mockImplementation(() => {});
     jest.spyOn(console, 'error').mockImplementation(() => {});
     jest.spyOn(console, 'info').mockImplementation(() => {});
+    mockGetInstalledPackageVersion.mockReturnValue('1.0.0');
   });
 
   afterEach(() => {
