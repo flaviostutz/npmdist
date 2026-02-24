@@ -6,7 +6,7 @@ import { execSync } from 'node:child_process';
 
 import archiver from 'archiver';
 
-import { Consumer } from './consumer';
+import { extract, check } from './consumer';
 import { FolderPublisherMarker } from './types';
 import { readJsonFile } from './utils';
 
@@ -26,12 +26,13 @@ describe('Consumer', () => {
 
   describe('check', () => {
     it('should fail when package is not installed', async () => {
-      const consumer = new Consumer({
-        packageName: 'nonexistent-package',
-        outputDir: path.join(tmpDir, 'output'),
-        cwd: tmpDir,
-      });
-      await expect(consumer.check()).rejects.toThrow(`nonexistent-package is not installed`);
+      await expect(
+        check({
+          packageName: 'nonexistent-package',
+          outputDir: path.join(tmpDir, 'output'),
+          cwd: tmpDir,
+        }),
+      ).rejects.toThrow(`nonexistent-package is not installed`);
     });
   });
 
@@ -49,15 +50,12 @@ describe('Consumer', () => {
         tmpDir,
       );
 
-      const consumer = new Consumer({
+      await extract({
         packageName: 'test-extract-package',
         outputDir,
         packageManager: 'pnpm',
         cwd: tmpDir,
       });
-
-      // Perform extraction
-      await consumer.extract();
 
       // Verify files were extracted
       expect(fs.existsSync(path.join(outputDir, 'README.md'))).toBe(true);
@@ -96,14 +94,12 @@ describe('Consumer', () => {
         tmpDir,
       );
 
-      const consumer = new Consumer({
+      await extract({
         packageName: 'test-readonly-package',
         outputDir,
         packageManager: 'pnpm',
         cwd: tmpDir,
       });
-
-      await consumer.extract();
 
       const extractedFile = path.join(outputDir, 'template.md');
       expect(fs.existsSync(extractedFile)).toBe(true);
@@ -242,5 +238,24 @@ describe('installMockPackage', () => {
     // package directory derived from resolved path must contain the installed files
     const pkgDir = path.dirname(resolvedPath);
     expect(fs.readFileSync(path.join(pkgDir, 'index.js')).toString()).toBe('module.exports = {};');
+  });
+
+  it('should produce a module that can be required and executed', async () => {
+    await installMockPackage(
+      'mock-pkg-usable',
+      {
+        'index.js':
+          'module.exports = { answer: 42, greet: function(name) { return "hello " + name; } };',
+      },
+      tmpDir,
+    );
+
+    const mod = require.resolve('mock-pkg-usable', { paths: [tmpDir] });
+    // check module contents
+    const pkgDir = path.dirname(mod);
+    // eslint-disable-next-line import/no-dynamic-require, global-require, @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
+    const requiredModule = require(pkgDir);
+    expect(requiredModule.answer).toBe(42);
+    expect(requiredModule.greet('world')).toBe('hello world');
   });
 });

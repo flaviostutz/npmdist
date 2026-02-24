@@ -7,9 +7,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { Consumer } from './consumer';
+import { extract, check } from './consumer';
 import { ConsumerConfig } from './types';
-import { PublisherInit } from './publisher-init';
+import { initPublisher } from './publisher';
 
 /**
  * CLI for folder-publisher
@@ -60,8 +60,7 @@ export async function cli(processArgs: string[]): Promise<number> {
 
     const folders = sourceFoldersFlag.split(',').map((f) => f.trim());
 
-    const publisher = new PublisherInit();
-    const result = await publisher.init(folders);
+    const result = await initPublisher(folders);
 
     if (!result.success) {
       console.error(`\n✗ Error: ${result.message}`);
@@ -85,7 +84,7 @@ export async function cli(processArgs: string[]): Promise<number> {
 
   // Parse options
   let version: string | undefined;
-  let check = false;
+  let checkFlag = false;
   let allowConflicts = false;
   let filenamePatterns: string | undefined;
   let contentRegexes: string | undefined;
@@ -98,7 +97,7 @@ export async function cli(processArgs: string[]): Promise<number> {
     if (args[i] === '--version') {
       version = args[++i];
     } else if (args[i] === '--check') {
-      check = true;
+      checkFlag = true;
     } else if (args[i] === '--allow-conflicts') {
       allowConflicts = true;
     } else if (args[i] === '--files') {
@@ -116,7 +115,7 @@ export async function cli(processArgs: string[]): Promise<number> {
     packageName,
     version,
     outputDir: path.resolve(outDir),
-    check,
+    check: checkFlag,
     allowConflicts,
     filenamePatterns: filenamePatterns ? filenamePatterns.split(',') : defaultPatterns,
     contentRegexes: contentRegexes
@@ -125,11 +124,9 @@ export async function cli(processArgs: string[]): Promise<number> {
         undefined,
   };
 
-  const consumer = new Consumer(config);
-
   if (subCommand === 'extract') {
     console.log(`\nExtracting files from ${packageName}...`);
-    const result = await consumer.extract();
+    const result = await extract(config);
 
     console.log(
       `\n✓ Extraction complete: ${result.created} created, ${result.updated} updated, ${result.deleted} deleted`,
@@ -155,7 +152,7 @@ export async function cli(processArgs: string[]): Promise<number> {
   }
   if (subCommand === 'check') {
     console.log(`\nChecking ${packageName}...`);
-    const result = await consumer.check();
+    const result = await check(config);
 
     if (result.ok) {
       console.log('✓ All files are in sync');

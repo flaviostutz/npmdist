@@ -1,6 +1,6 @@
 // Main exports
-export { Consumer } from './consumer';
-export { PublisherInit } from './publisher-init';
+export { extract, check } from './consumer';
+export { initPublisher } from './publisher';
 
 // Type exports
 export type {
@@ -9,4 +9,4 @@ export type {
   ManagedFileMetadata,
   PublishablePackageJson,
 } from './types';
-export type { PublisherInitConfig, InitResult } from './publisher-init';
+export type { PublisherInitOptions, InitResult } from './publisher';

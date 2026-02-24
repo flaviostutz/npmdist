@@ -1,7 +1,7 @@
 /**
  * Configuration for filtering which files to include/exclude
  */
-export interface FileFilterConfig {
+export type FileFilterConfig = {
   /**
    * Glob patterns to match filenames (e.g., "*.md", "src/**\/*.ts")
    */
@@ -11,12 +11,12 @@ export interface FileFilterConfig {
    * Regex patterns to match file contents (files must contain at least one match)
    */
   contentRegexes?: RegExp[];
-}
+};
 
 /**
  * Configuration for the consumer
  */
-export interface ConsumerConfig extends FileFilterConfig {
+export type ConsumerConfig = FileFilterConfig & {
   /**
    * Package name to install from registry
    */
@@ -52,12 +52,12 @@ export interface ConsumerConfig extends FileFilterConfig {
    * Defaults to process.cwd() if not specified.
    */
   cwd?: string;
-}
+};
 
 /**
  * Metadata about managed files
  */
-export interface ManagedFileMetadata {
+export type ManagedFileMetadata = {
   /**
    * Path to the managed file (relative to marker file directory)
    */
@@ -72,12 +72,12 @@ export interface ManagedFileMetadata {
    * Package version that created this file
    */
   packageVersion: string;
-}
+};
 
 /**
  * Contents of the .folder-publisher marker file
  */
-export interface FolderPublisherMarker {
+export type FolderPublisherMarker = {
   /**
    * Version of the marker format
    */
@@ -87,12 +87,12 @@ export interface FolderPublisherMarker {
    * Files managed in this directory (can be from multiple packages)
    */
   managedFiles: ManagedFileMetadata[];
-}
+};
 
 /**
  * Result of a consumer operation
  */
-export interface ConsumerResult {
+export type ConsumerResult = {
   /**
    * Number of files created
    */
@@ -124,12 +124,12 @@ export interface ConsumerResult {
     name: string;
     version: string;
   };
-}
+};
 
 /**
  * Result of a check operation
  */
-export interface CheckResult {
+export type CheckResult = {
   /**
    * Whether all files are in sync
    */
@@ -162,12 +162,12 @@ export interface CheckResult {
     name: string;
     version: string;
   };
-}
+};
 
 /**
  * Package.json for a publishable project
  */
-export interface PublishablePackageJson {
+export type PublishablePackageJson = {
   name: string;
   version: string;
   description?: string;
@@ -176,4 +176,4 @@ export interface PublishablePackageJson {
   files?: string[];
   dependencies?: Record<string, string>;
   [key: string]: unknown;
-}
+};
