@@ -128,9 +128,14 @@ export function detectPackageManager(): 'npm' | 'yarn' | 'pnpm' {
 /**
  * Get package info from installed package
  */
-export function getInstalledPackageVersion(packageName: string): string | null {
+export function getInstalledPackageVersion(packageName: string, cwd?: string): string | null {
   // eslint-disable-next-line functional/no-try-statements
   try {
+    if (cwd) {
+      const pkgPath = path.join(cwd, 'node_modules', packageName, 'package.json');
+      const pkg = JSON.parse(fs.readFileSync(pkgPath).toString());
+      return pkg.version;
+    }
     const pkgPath = require.resolve(`${packageName}/package.json`);
     const pkg = JSON.parse(fs.readFileSync(pkgPath).toString());
     return pkg.version;

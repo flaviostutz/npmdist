@@ -24,11 +24,10 @@
   "homepage": "https://github.com/flaviostutz/folder-publisher#readme",
   "devDependencies": {
     "@babel/preset-typescript": "^7.21.0",
-    "@stutzlab/eslint-config": "^3.1.1",
+    "@stutzlab/eslint-config": "^3.2.1",
     "@tsconfig/node20": "^20.1.4",
     "@types/archiver": "^6.0.2",
     "@types/jest": "^29.4.0",
-    "@types/minimatch": "^5.1.2",
     "@types/node": "^20.14.8",
     "@types/semver": "^7.7.1",
     "esbuild-jest": "^0.5.0",
@@ -39,7 +38,7 @@
   "dependencies": {
     "archiver": "^6.0.2",
     "esbuild": "^0.25.9",
-    "minimatch": "^9.0.5",
+    "minimatch": "^10.2.2",
     "semver": "^7.7.4"
   },
   "publishConfig": {

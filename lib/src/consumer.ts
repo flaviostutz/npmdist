@@ -83,10 +83,10 @@ export class Consumer {
    * Check if managed files are in sync
    */
   public async check(): Promise<CheckResult> {
-    const installedVersion = getInstalledPackageVersion(this.config.packageName);
+    const installedVersion = getInstalledPackageVersion(this.config.packageName, this.config.cwd);
 
     if (!installedVersion) {
-      throw new Error(`Package ${this.config.packageName} is not installed. Run extract first.`);
+      throw new Error(`Package ${this.config.packageName} is not installed. Install it first.`);
     }
 
     // Load all managed files
@@ -153,7 +153,7 @@ export class Consumer {
    * Ensure package is installed
    */
   private async ensurePackageInstalled(): Promise<string> {
-    const existingVersion = getInstalledPackageVersion(this.config.packageName);
+    const existingVersion = getInstalledPackageVersion(this.config.packageName, this.config.cwd);
 
     if (!existingVersion) {
       // Install the package
@@ -161,7 +161,7 @@ export class Consumer {
     }
 
     // Verify version if specified
-    const installedVersion = getInstalledPackageVersion(this.config.packageName);
+    const installedVersion = getInstalledPackageVersion(this.config.packageName, this.config.cwd);
     if (!installedVersion) {
       throw new Error(`Couldn't find package ${this.config.packageName}`);
     }
@@ -195,7 +195,7 @@ export class Consumer {
     }
 
     console.log(`Installing ${packageSpec}...`);
-    execSync(cmd, { encoding: 'utf8', stdio: 'pipe' });
+    execSync(cmd, { encoding: 'utf8', stdio: 'pipe', cwd: this.config.cwd });
   }
 
   /**
@@ -210,7 +210,10 @@ export class Consumer {
     };
 
     // Get package contents
-    const installedPackageVersion = getInstalledPackageVersion(this.config.packageName);
+    const installedPackageVersion = getInstalledPackageVersion(
+      this.config.packageName,
+      this.config.cwd,
+    );
     if (!installedPackageVersion) {
       throw new Error(
         `Failed to determine installed version of package ${this.config.packageName}`,
@@ -493,7 +496,24 @@ export class Consumer {
    * Get installed package path
    */
   private getInstalledPackagePath(): string | null {
-    const pkgPath = require.resolve(`${this.config.packageName}/package.json`);
-    return path.dirname(pkgPath);
+    // eslint-disable-next-line functional/no-try-statements
+    try {
+      if (this.config.cwd) {
+        const pkgPath = path.join(
+          this.config.cwd,
+          'node_modules',
+          this.config.packageName,
+          'package.json',
+        );
+        if (fs.existsSync(pkgPath)) {
+          return path.dirname(pkgPath);
+        }
+      }
+      const pkgPath = require.resolve(`${this.config.packageName}/package.json`);
+      return path.dirname(pkgPath);
+    } catch {
+      // eslint-disable-next-line unicorn/no-null
+      return null;
+    }
   }
 }

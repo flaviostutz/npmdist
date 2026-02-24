@@ -46,6 +46,12 @@ export interface ConsumerConfig extends FileFilterConfig {
    * Allow creating conflicting files (default: false, will error)
    */
   allowConflicts?: boolean;
+
+  /**
+   * Working directory from which to run package manager install commands (e.g. pnpm add).
+   * Defaults to process.cwd() if not specified.
+   */
+  cwd?: string;
 }
 
 /**
