@@ -48,6 +48,8 @@ npx my-shared-assets extract --output ./data
 npx my-shared-assets check  --output ./data
 ```
 
+Check the /examples folder to see this in action
+
 ### 3. Check files are in sync
 
 ```sh
