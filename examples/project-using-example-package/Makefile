@@ -8,7 +8,7 @@ install:
 
 build: install
 # 	pnpm exec example-files-package
-	pnpm exec example-files-package extract
+	pnpm exec example-files-package extract --gitignore
 
 test:
 	# install the data package and extract the data

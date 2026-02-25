@@ -1,4 +1,16 @@
 /**
+ * Default filename patterns applied when no filenamePatterns are specified.
+ * Excludes common package metadata files that are not meant to be extracted by consumers.
+ */
+export const DEFAULT_FILENAME_PATTERNS = [
+  '**',
+  '!package.json',
+  '!bin/**',
+  '!README.md',
+  '!node_modules/**',
+];
+
+/**
  * Configuration for filtering which files to include/exclude
  */
 export type FileFilterConfig = {

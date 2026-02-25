@@ -244,14 +244,13 @@ describe('CLI', () => {
       expect(config.outputDir).toContain('custom-output');
     });
 
-    it('should use default filename patterns when --files not specified', async () => {
+    it('should pass undefined filenamePatterns to extract when --files not specified', async () => {
       mockExtract.mockResolvedValue(defaultExtractResult);
 
       await cli(['node', 'cli.js', 'extract', '--package', 'my-pkg', '/output']);
 
       const config = mockExtract.mock.calls[0][0];
-      expect(config.filenamePatterns).toContain('!package.json');
-      expect(config.filenamePatterns).toContain('!bin/**');
+      expect(config.filenamePatterns).toBeUndefined();
     });
 
     it('should log created, updated and deleted files with status symbols', async () => {

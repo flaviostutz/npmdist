@@ -94,9 +94,6 @@ export async function cli(processArgs: string[]): Promise<number> {
   let contentRegexes: string | undefined;
   let outDir = process.cwd();
 
-  // Default patterns (will exclude common files present in packages that are not meant to be extracted normally)
-  const defaultPatterns = ['!package.json', '!bin/**', '!README.md', '!node_modules/**'];
-
   for (let i = 1; i < args.length; i++) {
     if (args[i] === '--package' || args[i] === '-p') {
       packageName = args[++i];
@@ -129,7 +126,10 @@ export async function cli(processArgs: string[]): Promise<number> {
     outputDir: path.resolve(outDir),
     force,
     gitignore,
-    filenamePatterns: filenamePatterns ? filenamePatterns.split(',') : defaultPatterns,
+    filenamePatterns: filenamePatterns
+      ? filenamePatterns.split(',')
+      : // eslint-disable-next-line no-undefined
+        undefined,
     contentRegexes: contentRegexes
       ? contentRegexes.split(',').map((r) => new RegExp(r))
       : // eslint-disable-next-line no-undefined
@@ -138,8 +138,9 @@ export async function cli(processArgs: string[]): Promise<number> {
 
   if (command === 'extract') {
     const installedVersion = getInstalledPackageVersion(config.packageName, config.cwd);
+    const relDir = path.relative(process.cwd(), config.outputDir) || '.';
     console.info(
-      `Extracting files from ${config.packageName}${installedVersion ? `@${installedVersion}` : ''} to ${config.outputDir}...`,
+      `Extracting files from ${config.packageName}${installedVersion ? `@${installedVersion}` : ''} to '${relDir}'...`,
     );
 
     const result = await extract(config);
@@ -156,15 +157,15 @@ export async function cli(processArgs: string[]): Promise<number> {
     }
 
     console.log(
-      `\n✓ Extraction complete: ${result.added.length} added, ${result.modified.length} modified, ${result.deleted.length} deleted, ${result.skipped.length} skipped`,
+      `Extraction complete: ${result.added.length} added, ${result.modified.length} modified, ${result.deleted.length} deleted, ${result.skipped.length} skipped`,
     );
-    console.log(`\nPackage: ${result.sourcePackage.name}@${result.sourcePackage.version}`);
     return 0;
   }
   if (command === 'check') {
     const installedVersion = getInstalledPackageVersion(config.packageName, config.cwd);
+    const relDir = path.relative(process.cwd(), config.outputDir) || '.';
     console.log(
-      `\nChecking data from ${config.packageName}${installedVersion ? `@${installedVersion}` : ''} against ${config.outputDir}...`,
+      `\nChecking data from ${config.packageName}${installedVersion ? `@${installedVersion}` : ''} against ${relDir}...`,
     );
     const result = await check(config);
 

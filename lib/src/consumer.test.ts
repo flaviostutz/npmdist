@@ -42,6 +42,7 @@ describe('Consumer', () => {
         outputDir,
         packageManager: 'pnpm',
         cwd: tmpDir,
+        filenamePatterns: ['**'],
       });
 
       // Verify files were extracted
@@ -132,6 +133,7 @@ describe('Consumer', () => {
         outputDir,
         packageManager: 'pnpm',
         cwd: tmpDir,
+        filenamePatterns: ['**'],
       });
 
       // Capture file contents and modification times after first extraction
@@ -156,6 +158,7 @@ describe('Consumer', () => {
         outputDir,
         packageManager: 'pnpm',
         cwd: tmpDir,
+        filenamePatterns: ['**'],
       });
 
       // No files should be added, modified, or deleted on second run; all should be skipped
@@ -397,6 +400,7 @@ describe('Consumer', () => {
         packageManager: 'pnpm',
         cwd: tmpDir,
         gitignore: true,
+        filenamePatterns: ['**'],
       });
 
       // Root .gitignore should contain .publisher and the managed file
@@ -484,6 +488,240 @@ describe('Consumer', () => {
 
       // .gitignore should be removed since there are no other entries
       expect(fs.existsSync(path.join(outputDir, '.gitignore'))).toBe(false);
+    });
+
+    it('should remove only deleted files from .gitignore when some package files are removed', async () => {
+      const outputDir = path.join(tmpDir, 'output');
+
+      await installMockPackage(
+        'test-partial-delete-package',
+        {
+          'docs/guide.md': '# Guide',
+          'docs/api.md': '# API',
+        },
+        tmpDir,
+      );
+
+      await extract({
+        packageName: 'test-partial-delete-package',
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+        gitignore: true,
+        filenamePatterns: ['**'],
+      });
+
+      const before = fs.readFileSync(path.join(outputDir, 'docs', '.gitignore'), 'utf8');
+      expect(before).toContain('guide.md');
+      expect(before).toContain('api.md');
+
+      // Reinstall package with only one file
+      await installMockPackage(
+        'test-partial-delete-package',
+        { 'docs/guide.md': '# Guide' },
+        tmpDir,
+      );
+
+      await extract({
+        packageName: 'test-partial-delete-package',
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+        gitignore: true,
+        filenamePatterns: ['**'],
+      });
+
+      const after = fs.readFileSync(path.join(outputDir, 'docs', '.gitignore'), 'utf8');
+      expect(after).toContain('guide.md');
+      expect(after).not.toContain('api.md');
+    });
+
+    it('should remove .gitignore entries for deleted files even when gitignore option is not set', async () => {
+      const outputDir = path.join(tmpDir, 'output');
+
+      // First extract with gitignore: true to create the .gitignore
+      await installMockPackage(
+        'test-gitignore-implicit-cleanup-package',
+        { 'data.csv': 'a,b', 'other.csv': 'c,d' },
+        tmpDir,
+      );
+
+      await extract({
+        packageName: 'test-gitignore-implicit-cleanup-package',
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+        gitignore: true,
+        filenamePatterns: ['**'],
+      });
+
+      expect(fs.existsSync(path.join(outputDir, '.gitignore'))).toBe(true);
+      const before = fs.readFileSync(path.join(outputDir, '.gitignore'), 'utf8');
+      expect(before).toContain('data.csv');
+      expect(before).toContain('other.csv');
+
+      // Re-extract without gitignore option but with one file removed
+      await installMockPackage(
+        'test-gitignore-implicit-cleanup-package',
+        { 'data.csv': 'a,b' },
+        tmpDir,
+      );
+
+      await extract({
+        packageName: 'test-gitignore-implicit-cleanup-package',
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+        // gitignore not set — but deleted files should still be purged from .gitignore
+        filenamePatterns: ['**'],
+      });
+
+      const after = fs.readFileSync(path.join(outputDir, '.gitignore'), 'utf8');
+      expect(after).toContain('data.csv');
+      expect(after).not.toContain('other.csv');
+    });
+
+    it('should allow two packages to coexist in the same output directory with isolated marker entries', async () => {
+      const outputDir = path.join(tmpDir, 'output');
+
+      await installMockPackage('pkg-coexist-a', { 'docs/a-guide.md': '# Guide A' }, tmpDir);
+      await installMockPackage('pkg-coexist-b', { 'docs/b-guide.md': '# Guide B' }, tmpDir);
+
+      await extract({
+        packageName: 'pkg-coexist-a',
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+      });
+      await extract({
+        packageName: 'pkg-coexist-b',
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+      });
+
+      // Both files must be present
+      expect(fs.existsSync(path.join(outputDir, 'docs', 'a-guide.md'))).toBe(true);
+      expect(fs.existsSync(path.join(outputDir, 'docs', 'b-guide.md'))).toBe(true);
+
+      // The docs/.publisher marker must carry entries for both packages
+      const marker = readCsvMarker(path.join(outputDir, 'docs', '.publisher'));
+      expect(marker.some((m) => m.packageName === 'pkg-coexist-a' && m.path === 'a-guide.md')).toBe(
+        true,
+      );
+      expect(marker.some((m) => m.packageName === 'pkg-coexist-b' && m.path === 'b-guide.md')).toBe(
+        true,
+      );
+    });
+
+    it('should not remove files managed by another package when re-extracting', async () => {
+      const outputDir = path.join(tmpDir, 'output');
+
+      await installMockPackage('pkg-reextract-a', { 'docs/a-file.md': '# A' }, tmpDir);
+      await installMockPackage('pkg-reextract-b', { 'docs/b-file.md': '# B' }, tmpDir);
+
+      await extract({
+        packageName: 'pkg-reextract-a',
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+      });
+      await extract({
+        packageName: 'pkg-reextract-b',
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+      });
+
+      // Re-extract package-b (no changes to package content)
+      const result = await extract({
+        packageName: 'pkg-reextract-b',
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+      });
+
+      // Package-a's file must not be touched
+      expect(result.deleted).not.toContain('docs/a-file.md');
+      expect(fs.existsSync(path.join(outputDir, 'docs', 'a-file.md'))).toBe(true);
+
+      // Package-a's marker entry must still be present
+      const marker = readCsvMarker(path.join(outputDir, 'docs', '.publisher'));
+      expect(
+        marker.some((m) => m.packageName === 'pkg-reextract-a' && m.path === 'a-file.md'),
+      ).toBe(true);
+    });
+
+    it('should only remove the calling package entries from marker when its files are dropped, leaving other package entries intact', async () => {
+      const outputDir = path.join(tmpDir, 'output');
+
+      await installMockPackage('pkg-drop-a', { 'docs/a-drop.md': '# A' }, tmpDir);
+      await installMockPackage('pkg-drop-b', { 'docs/b-keep.md': '# B' }, tmpDir);
+
+      await extract({ packageName: 'pkg-drop-a', outputDir, packageManager: 'pnpm', cwd: tmpDir });
+      await extract({ packageName: 'pkg-drop-b', outputDir, packageManager: 'pnpm', cwd: tmpDir });
+
+      // Reinstall package-a with no files (simulates the file being dropped from the package)
+      await installMockPackage('pkg-drop-a', {}, tmpDir);
+
+      const result = await extract({
+        packageName: 'pkg-drop-a',
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+      });
+
+      // Package-a's file must be deleted
+      expect(result.deleted).toContain('docs/a-drop.md');
+      expect(fs.existsSync(path.join(outputDir, 'docs', 'a-drop.md'))).toBe(false);
+
+      // Package-b's file must still exist
+      expect(fs.existsSync(path.join(outputDir, 'docs', 'b-keep.md'))).toBe(true);
+
+      // Marker must only contain package-b's entry
+      const marker = readCsvMarker(path.join(outputDir, 'docs', '.publisher'));
+      expect(marker.some((m) => m.packageName === 'pkg-drop-a')).toBe(false);
+      expect(marker.some((m) => m.packageName === 'pkg-drop-b' && m.path === 'b-keep.md')).toBe(
+        true,
+      );
+    });
+
+    it('should correctly delete a same-named file in a different directory when that directory entry is removed from the package', async () => {
+      const outputDir = path.join(tmpDir, 'output');
+
+      // Package has README.md in two different directories
+      await installMockPackage(
+        'pkg-samename',
+        { 'docs/README.md': '# Docs', 'src/README.md': '# Src' },
+        tmpDir,
+      );
+
+      await extract({
+        packageName: 'pkg-samename',
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+      });
+
+      expect(fs.existsSync(path.join(outputDir, 'docs', 'README.md'))).toBe(true);
+      expect(fs.existsSync(path.join(outputDir, 'src', 'README.md'))).toBe(true);
+
+      // Reinstall package with only docs/README.md (src/README.md dropped)
+      await installMockPackage('pkg-samename', { 'docs/README.md': '# Docs' }, tmpDir);
+
+      const result = await extract({
+        packageName: 'pkg-samename',
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+      });
+
+      // src/README.md must be deleted even though docs/README.md with the same name still exists
+      expect(result.deleted).toContain('src/README.md');
+      expect(fs.existsSync(path.join(outputDir, 'src', 'README.md'))).toBe(false);
+
+      // docs/README.md must remain
+      expect(fs.existsSync(path.join(outputDir, 'docs', 'README.md'))).toBe(true);
     });
   });
 

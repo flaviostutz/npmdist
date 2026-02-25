@@ -9,7 +9,13 @@ import { execSync } from 'node:child_process';
 
 import { satisfies } from 'semver';
 
-import { ConsumerConfig, ConsumerResult, CheckResult, ManagedFileMetadata } from './types';
+import {
+  ConsumerConfig,
+  ConsumerResult,
+  CheckResult,
+  ManagedFileMetadata,
+  DEFAULT_FILENAME_PATTERNS,
+} from './types';
 import {
   ensureDir,
   removeFile,
@@ -33,8 +39,10 @@ const GITIGNORE_END = '# folder-publisher:end';
  * files and the .publisher marker file are ignored by git.
  * If managedFilenames is empty the folder-publisher section is removed; if the
  * resulting file is empty it is deleted.
+ * When addEntries is false, only existing sections are updated/removed — no new
+ * section is written if one did not already exist.
  */
-function updateGitignoreForDir(dir: string, managedFilenames: string[]): void {
+function updateGitignoreForDir(dir: string, managedFilenames: string[], addEntries = true): void {
   const gitignorePath = path.join(dir, GITIGNORE_FILE);
 
   let existingContent = '';
@@ -44,16 +52,21 @@ function updateGitignoreForDir(dir: string, managedFilenames: string[]): void {
 
   const startIdx = existingContent.indexOf(GITIGNORE_START);
   const endIdx = existingContent.indexOf(GITIGNORE_END);
+  const hasExistingSection = startIdx !== -1 && endIdx !== -1 && startIdx < endIdx;
+
+  // When not adding entries and there is no existing section, there is nothing to clean up.
+  if (!addEntries && !hasExistingSection) return;
 
   let beforeSection = existingContent;
   let afterSection = '';
 
-  if (startIdx !== -1 && endIdx !== -1 && startIdx < endIdx) {
+  if (hasExistingSection) {
     beforeSection = existingContent.slice(0, startIdx).trimEnd();
     afterSection = existingContent.slice(endIdx + GITIGNORE_END.length).trimStart();
   }
 
   if (managedFilenames.length === 0) {
+    // Remove the managed section entirely.
     const updatedContent = [beforeSection, afterSection].filter(Boolean).join('\n');
     if (updatedContent.trim()) {
       fs.writeFileSync(gitignorePath, `${updatedContent.trimEnd()}\n`, 'utf8');
@@ -63,6 +76,8 @@ function updateGitignoreForDir(dir: string, managedFilenames: string[]): void {
     return;
   }
 
+  // When addEntries is false, only update an existing section (stale entries removed);
+  // if there is no existing section do not create one (already returned above).
   const section = [GITIGNORE_START, MARKER_FILE, ...managedFilenames.sort(), GITIGNORE_END].join(
     '\n',
   );
@@ -76,8 +91,10 @@ function updateGitignoreForDir(dir: string, managedFilenames: string[]): void {
  * Walk outputDir and update .gitignore files for every directory that has a
  * .publisher marker (to reflect its current managed files) and also clean up
  * any folder-publisher sections in directories where the marker was removed.
+ * When addEntries is false, existing sections are updated/removed but no new
+ * sections are created — use this to clean up without opting into gitignore management.
  */
-function updateGitignores(outputDir: string): void {
+function updateGitignores(outputDir: string, addEntries = true): void {
   if (!fs.existsSync(outputDir)) return;
 
   const walkDir = (dir: string): void => {
@@ -90,13 +107,14 @@ function updateGitignores(outputDir: string): void {
         updateGitignoreForDir(
           dir,
           managedFiles.map((m) => m.path),
+          addEntries,
         );
       } catch {
         // Ignore unreadable marker files
       }
     } else if (fs.existsSync(gitignorePath)) {
       // Clean up any leftover folder-publisher section
-      updateGitignoreForDir(dir, []);
+      updateGitignoreForDir(dir, [], addEntries);
     }
 
     for (const item of fs.readdirSync(dir)) {
@@ -349,7 +367,10 @@ async function extractFiles(
 
   for (const packageFile of packageFiles) {
     if (
-      !matchesFilenamePattern(packageFile.relPath, config.filenamePatterns) ||
+      !matchesFilenamePattern(
+        packageFile.relPath,
+        config.filenamePatterns ?? DEFAULT_FILENAME_PATTERNS,
+      ) ||
       !matchesContentRegex(packageFile.fullPath, config.contentRegexes)
     ) {
       continue;
@@ -406,9 +427,9 @@ async function extractFiles(
   for (const [relPath, owner] of existingManagedMap) {
     if (owner.packageName !== config.packageName) continue;
 
-    const stillPresent = Array.from(addedByDir.values())
-      .flat()
-      .some((m) => m.path === path.basename(relPath));
+    const fileDir = path.dirname(relPath) === '.' ? '.' : path.dirname(relPath);
+    const dirFiles = addedByDir.get(fileDir) ?? [];
+    const stillPresent = dirFiles.some((m) => m.path === path.basename(relPath));
 
     if (!stillPresent) {
       const fullPath = path.join(config.outputDir, relPath);
@@ -488,11 +509,10 @@ export async function extract(config: ConsumerConfig): Promise<ConsumerResult> {
 
   const changes = await extractFiles(config);
   cleanupEmptyMarkers(config.outputDir);
+  // Always clean up .gitignore entries for removed files; only add new entries when gitignore: true.
+  updateGitignores(config.outputDir, config.gitignore ?? false);
+  // Run after gitignore cleanup so dirs kept alive only by a .gitignore get removed.
   cleanupEmptyDirs(config.outputDir);
-
-  if (config.gitignore) {
-    updateGitignores(config.outputDir);
-  }
 
   return {
     added: changes.added,
