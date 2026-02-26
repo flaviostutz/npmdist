@@ -1,4 +1,4 @@
-name: Create Release Pre
+name: release-pre
 on:
   push:
     branches:

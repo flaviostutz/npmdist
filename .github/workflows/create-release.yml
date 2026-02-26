@@ -1,4 +1,4 @@
-name: Create Release
+name: release
 on:
   workflow_dispatch:
 
@@ -7,5 +7,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Create Release
-        run: make publish
+      - run: make publish
