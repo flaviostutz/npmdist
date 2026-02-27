@@ -723,6 +723,170 @@ describe('Consumer', () => {
       // docs/README.md must remain
       expect(fs.existsSync(path.join(outputDir, 'docs', 'README.md'))).toBe(true);
     });
+
+    it('should throw a package clash error when a file is already managed by a different package', async () => {
+      const outputDir = path.join(tmpDir, 'output');
+
+      await installMockPackage('pkg-clash-a', { 'docs/shared.md': '# Shared by A' }, tmpDir);
+      await installMockPackage('pkg-clash-b', { 'docs/shared.md': '# Shared by B' }, tmpDir);
+
+      await extract({
+        packageName: 'pkg-clash-a',
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+      });
+
+      await expect(
+        extract({
+          packageName: 'pkg-clash-b',
+          outputDir,
+          packageManager: 'pnpm',
+          cwd: tmpDir,
+        }),
+      ).rejects.toThrow('Package clash');
+    });
+
+    it('should throw when installed package version does not satisfy the requested version constraint', async () => {
+      const outputDir = path.join(tmpDir, 'output');
+
+      await installMockPackage('pkg-version-check', { 'file.md': '# File' }, tmpDir);
+
+      await expect(
+        extract({
+          packageName: 'pkg-version-check',
+          outputDir,
+          packageManager: 'pnpm',
+          cwd: tmpDir,
+          version: '>=99.0.0',
+        }),
+      ).rejects.toThrow('does not match constraint');
+    });
+
+    it('should report modified files when package content changes on re-extraction', async () => {
+      const outputDir = path.join(tmpDir, 'output');
+
+      await installMockPackage('pkg-content-change', { 'docs/note.md': '# Version 1' }, tmpDir);
+
+      await extract({
+        packageName: 'pkg-content-change',
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+      });
+
+      // Reinstall with different content
+      await installMockPackage('pkg-content-change', { 'docs/note.md': '# Version 2' }, tmpDir);
+
+      const result = await extract({
+        packageName: 'pkg-content-change',
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+      });
+
+      expect(result.modified).toContain('docs/note.md');
+      expect(result.added).toHaveLength(0);
+      const content = fs.readFileSync(path.join(outputDir, 'docs', 'note.md'), 'utf8');
+      expect(content).toBe('# Version 2');
+    });
+
+    it('should preserve non-npmdist content in .gitignore when removing the managed section', async () => {
+      const outputDir = path.join(tmpDir, 'output');
+      fs.mkdirSync(outputDir, { recursive: true });
+
+      // Pre-populate .gitignore with content outside the npmdist section
+      fs.writeFileSync(path.join(outputDir, '.gitignore'), 'node_modules\nbuild/\n');
+
+      await installMockPackage('pkg-gitignore-preserve', { 'data.csv': 'a,b' }, tmpDir);
+
+      await extract({
+        packageName: 'pkg-gitignore-preserve',
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+        gitignore: true,
+        filenamePatterns: ['*.csv'],
+      });
+
+      // Verify the section was added
+      const before = fs.readFileSync(path.join(outputDir, '.gitignore'), 'utf8');
+      expect(before).toContain('node_modules');
+      expect(before).toContain('data.csv');
+
+      // Reinstall with empty package so the managed section gets removed
+      await installMockPackage('pkg-gitignore-preserve', {}, tmpDir);
+
+      await extract({
+        packageName: 'pkg-gitignore-preserve',
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+        gitignore: true,
+        filenamePatterns: ['*.csv'],
+      });
+
+      // .gitignore should still exist (non-npmdist content remains) but without the managed section
+      expect(fs.existsSync(path.join(outputDir, '.gitignore'))).toBe(true);
+      const after = fs.readFileSync(path.join(outputDir, '.gitignore'), 'utf8');
+      expect(after).toContain('node_modules');
+      expect(after).not.toContain('data.csv');
+      expect(after).not.toContain('# npmdist:start');
+    });
+
+    it('should clean up orphaned npmdist section in a subdirectory .gitignore when that dir has no marker', async () => {
+      const outputDir = path.join(tmpDir, 'output');
+      fs.mkdirSync(outputDir, { recursive: true });
+
+      // Create a subdirectory containing an orphaned .gitignore (no .publisher marker)
+      const orphanDir = path.join(outputDir, 'orphan-subdir');
+      fs.mkdirSync(orphanDir, { recursive: true });
+      const gitignoreContent = '# npmdist:start\n.publisher\norphan.md\n# npmdist:end\n';
+      fs.writeFileSync(path.join(orphanDir, '.gitignore'), gitignoreContent);
+
+      // Extract a package whose file goes into outputDir root (not into orphan-subdir)
+      await installMockPackage('pkg-orphan-gitignore', { 'root-file.md': '# Root' }, tmpDir);
+
+      // Extract without gitignore option: only cleanup runs, no new entries are added
+      await extract({
+        packageName: 'pkg-orphan-gitignore',
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+      });
+
+      // The orphaned npmdist section should have been removed from orphan-subdir/.gitignore
+      // (the file may be deleted entirely if it had no other content)
+      const orphanGitignorePath = path.join(orphanDir, '.gitignore');
+      const orphanGitignoreExists = fs.existsSync(orphanGitignorePath);
+      const orphanGitignoreContent = orphanGitignoreExists
+        ? fs.readFileSync(orphanGitignorePath, 'utf8')
+        : '';
+      expect(orphanGitignoreContent).not.toContain('# npmdist:start');
+    });
+
+    it('should clean up empty marker files left by prior operations', async () => {
+      const outputDir = path.join(tmpDir, 'output');
+      fs.mkdirSync(outputDir, { recursive: true });
+
+      // Manually create an empty .publisher marker file
+      const markerPath = path.join(outputDir, '.publisher');
+      fs.writeFileSync(markerPath, '\n');
+
+      await installMockPackage('pkg-empty-marker', { 'file.md': '# File' }, tmpDir);
+
+      // extract will call cleanupEmptyMarkers which should remove the empty marker
+      await extract({
+        packageName: 'pkg-empty-marker',
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+      });
+
+      // The root .publisher marker is now valid (has entries for pkg-empty-marker)
+      const marker = readCsvMarker(path.join(outputDir, '.publisher'));
+      expect(marker.some((m) => m.packageName === 'pkg-empty-marker')).toBe(true);
+    });
   });
 
   describe('check', () => {

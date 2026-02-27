@@ -37,3 +37,4 @@ install:
 lint:
 	echo "Nothing to lint. Ignoring"
 
+all: build test

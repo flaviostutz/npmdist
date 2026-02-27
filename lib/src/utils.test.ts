@@ -52,6 +52,10 @@ describe('Utils', () => {
     it('should return false if no pattern specified', () => {
       expect(matchesFilenamePattern('anything.txt', [])).toBe(false);
     });
+
+    it('should return true when patterns is undefined', () => {
+      expect(matchesFilenamePattern('anything.txt')).toBe(true);
+    });
   });
 
   describe('matchesContentRegex', () => {
@@ -250,6 +254,54 @@ describe('Utils', () => {
         }
       }
     });
+
+    it('should detect yarn via npm_config_user_agent when no lock file exists', () => {
+      const emptyDir = path.join(tmpDir, 'empty-ua-yarn');
+      fs.mkdirSync(emptyDir);
+      const origCwd = process.cwd();
+      // eslint-disable-next-line no-process-env
+      const origAgent = process.env.npm_config_user_agent;
+      process.chdir(emptyDir);
+      // eslint-disable-next-line no-process-env, functional/immutable-data, camelcase
+      process.env.npm_config_user_agent = 'yarn/1.22.0 npm/? node/v16.0.0 linux x64';
+      try {
+        const pm = detectPackageManager();
+        expect(pm).toBe('yarn');
+      } finally {
+        process.chdir(origCwd);
+        if (origAgent) {
+          // eslint-disable-next-line no-process-env, functional/immutable-data, camelcase
+          process.env.npm_config_user_agent = origAgent;
+        } else {
+          // eslint-disable-next-line no-process-env, functional/immutable-data, camelcase
+          delete process.env.npm_config_user_agent;
+        }
+      }
+    });
+
+    it('should detect pnpm via npm_config_user_agent when no lock file exists', () => {
+      const emptyDir = path.join(tmpDir, 'empty-ua-pnpm');
+      fs.mkdirSync(emptyDir);
+      const origCwd = process.cwd();
+      // eslint-disable-next-line no-process-env
+      const origAgent = process.env.npm_config_user_agent;
+      process.chdir(emptyDir);
+      // eslint-disable-next-line no-process-env, functional/immutable-data, camelcase
+      process.env.npm_config_user_agent = 'pnpm/8.0.0 npm/? node/v18.0.0 linux x64';
+      try {
+        const pm = detectPackageManager();
+        expect(pm).toBe('pnpm');
+      } finally {
+        process.chdir(origCwd);
+        if (origAgent) {
+          // eslint-disable-next-line no-process-env, functional/immutable-data, camelcase
+          process.env.npm_config_user_agent = origAgent;
+        } else {
+          // eslint-disable-next-line no-process-env, functional/immutable-data, camelcase
+          delete process.env.npm_config_user_agent;
+        }
+      }
+    });
   });
 
   describe('getInstalledPackageVersion', () => {
@@ -276,6 +328,13 @@ describe('Utils', () => {
 
       const version = getInstalledPackageVersion('my-fake-pkg', tmpDir);
       expect(version).toBe('3.2.1');
+    });
+
+    it('should return version string when package is resolvable without cwd', () => {
+      // semver is a dependency of this package so require.resolve can find it without cwd
+      const version = getInstalledPackageVersion('semver');
+      expect(typeof version).toBe('string');
+      expect(version).not.toBeNull();
     });
   });
 
