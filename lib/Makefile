@@ -41,7 +41,7 @@ publish:
 	if echo "$$VERSION" | grep -q '-'; then \
 		TAG=$$(echo "$$VERSION" | sed 's/[0-9]*\.[0-9]*\.[0-9]*-\([a-zA-Z][a-zA-Z0-9]*\).*/\1/'); \
 		echo "Prerelease version $$VERSION detected, publishing with --tag $$TAG to avoid it being 'latest'"; \
-		npm publish --no-git-checks --tag "$$TAG"; \
+		npm publish --no-git-checks --provenance --tag "$$TAG"; \
 	else \
-		npm publish --no-git-checks; \
+		npm publish --no-git-checks --provenance; \
 	fi
