@@ -36,3 +36,5 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - run: make build
       - run: make publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
