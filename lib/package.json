@@ -1,5 +1,5 @@
 {
-  "name": "npmdist",
+  "name": "npmdata",
   "version": "0.0.1",
   "description": "",
   "main": "dist/index.js",
@@ -14,14 +14,14 @@
   "scripts": {},
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/flaviostutz/npmdist.git"
+    "url": "git+https://github.com/flaviostutz/npmdata.git"
   },
   "author": "flaviostutz",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/flaviostutz/npmdist/issues"
+    "url": "https://github.com/flaviostutz/npmdata/issues"
   },
-  "homepage": "https://github.com/flaviostutz/npmdist#readme",
+  "homepage": "https://github.com/flaviostutz/npmdata#readme",
   "devDependencies": {
     "@babel/preset-typescript": "^7.21.0",
     "@stutzlab/eslint-config": "^3.2.1",

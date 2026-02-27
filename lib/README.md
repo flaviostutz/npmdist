@@ -1,4 +1,4 @@
-# npmdist — Developer Notes
+# npmdata — Developer Notes
 
 This document covers the internal architecture for contributors working on this library.
 
@@ -15,7 +15,7 @@ This document covers the internal architecture for contributors working on this 
 
 ## Publish side (`publisher.ts`)
 
-`initPublisher()` modifies the target `package.json` to include `files`, `bin`, and `dependencies` fields, then writes a thin `bin/npmdist.js` that calls `runner.run(__dirname)`. The generated script is kept minimal on purpose — all logic lives in this library.
+`initPublisher()` modifies the target `package.json` to include `files`, `bin`, and `dependencies` fields, then writes a thin `bin/npmdata.js` that calls `runner.run(__dirname)`. The generated script is kept minimal on purpose — all logic lives in this library.
 
 ## Consumer side (`consumer.ts`)
 

@@ -66,9 +66,9 @@ describe('Publisher', () => {
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
       expect(pkgJson.files).toContain('docs/**');
       expect(pkgJson.files).toContain('package.json');
-      expect(pkgJson.files).toContain('bin/npmdist.js');
-      expect(pkgJson.dependencies.npmdist).toBe('latest');
-      expect(pkgJson.bin).toBe('bin/npmdist.js');
+      expect(pkgJson.files).toContain('bin/npmdata.js');
+      expect(pkgJson.dependencies.npmdata).toBe('latest');
+      expect(pkgJson.bin).toBe('bin/npmdata.js');
       expect(pkgJson.name).toBe(path.basename(tmpDir));
       expect(pkgJson.version).toBe('1.0.0');
     });
@@ -78,10 +78,10 @@ describe('Publisher', () => {
 
       await initPublisher(['docs'], { workingDir: tmpDir });
 
-      const cliScriptPath = path.join(tmpDir, 'bin', 'npmdist.js');
+      const cliScriptPath = path.join(tmpDir, 'bin', 'npmdata.js');
       expect(fs.existsSync(cliScriptPath)).toBe(true);
       const content = fs.readFileSync(cliScriptPath, 'utf8');
-      expect(content).toContain('npmdist');
+      expect(content).toContain('npmdata');
       expect(content).toContain('#!/usr/bin/env node');
     });
 
@@ -90,7 +90,7 @@ describe('Publisher', () => {
 
       await initPublisher(['docs'], { workingDir: tmpDir });
 
-      const cliScriptPath = path.join(tmpDir, 'bin', 'npmdist.js');
+      const cliScriptPath = path.join(tmpDir, 'bin', 'npmdata.js');
       const stats = fs.statSync(cliScriptPath);
       // eslint-disable-next-line no-bitwise
       expect(stats.mode & 0o111).toBeGreaterThan(0);
@@ -166,7 +166,7 @@ describe('Publisher', () => {
       expect(pkgJson.files).toContain('CHANGELOG.md');
     });
 
-    it('should add npmdist dependency when no dependencies exist', async () => {
+    it('should add npmdata dependency when no dependencies exist', async () => {
       fs.mkdirSync(path.join(tmpDir, 'docs'));
 
       const existingPkg = { name: 'my-package', version: '1.0.0' };
@@ -175,7 +175,7 @@ describe('Publisher', () => {
       await initPublisher(['docs'], { workingDir: tmpDir });
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
-      expect(pkgJson.dependencies.npmdist).toBe('latest');
+      expect(pkgJson.dependencies.npmdata).toBe('latest');
     });
 
     it('should preserve existing bin field if set', async () => {

@@ -1,6 +1,6 @@
 # CONTRIBUTING
 
-Thank you for being interested in helping with npmdist!
+Thank you for being interested in helping with npmdata!
 
 ## The best way to start
 

@@ -8,6 +8,6 @@ In order to prepare this package to be published to a NPM registry, do the follo
 
 ```sh
 # changes package.json for required configurations
-pnpm dlx npmdist init --folders configs,data,docs
+pnpm dlx npmdata init --folders configs,data,docs
 
 ```

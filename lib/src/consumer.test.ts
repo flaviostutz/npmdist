@@ -407,8 +407,8 @@ describe('Consumer', () => {
       const rootGitignore = fs.readFileSync(path.join(outputDir, '.gitignore'), 'utf8');
       expect(rootGitignore).toContain('.publisher');
       expect(rootGitignore).toContain('README.md');
-      expect(rootGitignore).toContain('# npmdist:start');
-      expect(rootGitignore).toContain('# npmdist:end');
+      expect(rootGitignore).toContain('# npmdata:start');
+      expect(rootGitignore).toContain('# npmdata:end');
 
       // docs/.gitignore should contain .publisher and both managed docs files
       const docsGitignore = fs.readFileSync(path.join(outputDir, 'docs', '.gitignore'), 'utf8');
@@ -791,11 +791,11 @@ describe('Consumer', () => {
       expect(content).toBe('# Version 2');
     });
 
-    it('should preserve non-npmdist content in .gitignore when removing the managed section', async () => {
+    it('should preserve non-npmdata content in .gitignore when removing the managed section', async () => {
       const outputDir = path.join(tmpDir, 'output');
       fs.mkdirSync(outputDir, { recursive: true });
 
-      // Pre-populate .gitignore with content outside the npmdist section
+      // Pre-populate .gitignore with content outside the npmdata section
       fs.writeFileSync(path.join(outputDir, '.gitignore'), 'node_modules\nbuild/\n');
 
       await installMockPackage('pkg-gitignore-preserve', { 'data.csv': 'a,b' }, tmpDir);
@@ -826,22 +826,22 @@ describe('Consumer', () => {
         filenamePatterns: ['*.csv'],
       });
 
-      // .gitignore should still exist (non-npmdist content remains) but without the managed section
+      // .gitignore should still exist (non-npmdata content remains) but without the managed section
       expect(fs.existsSync(path.join(outputDir, '.gitignore'))).toBe(true);
       const after = fs.readFileSync(path.join(outputDir, '.gitignore'), 'utf8');
       expect(after).toContain('node_modules');
       expect(after).not.toContain('data.csv');
-      expect(after).not.toContain('# npmdist:start');
+      expect(after).not.toContain('# npmdata:start');
     });
 
-    it('should clean up orphaned npmdist section in a subdirectory .gitignore when that dir has no marker', async () => {
+    it('should clean up orphaned npmdata section in a subdirectory .gitignore when that dir has no marker', async () => {
       const outputDir = path.join(tmpDir, 'output');
       fs.mkdirSync(outputDir, { recursive: true });
 
       // Create a subdirectory containing an orphaned .gitignore (no .publisher marker)
       const orphanDir = path.join(outputDir, 'orphan-subdir');
       fs.mkdirSync(orphanDir, { recursive: true });
-      const gitignoreContent = '# npmdist:start\n.publisher\norphan.md\n# npmdist:end\n';
+      const gitignoreContent = '# npmdata:start\n.publisher\norphan.md\n# npmdata:end\n';
       fs.writeFileSync(path.join(orphanDir, '.gitignore'), gitignoreContent);
 
       // Extract a package whose file goes into outputDir root (not into orphan-subdir)
@@ -855,14 +855,14 @@ describe('Consumer', () => {
         cwd: tmpDir,
       });
 
-      // The orphaned npmdist section should have been removed from orphan-subdir/.gitignore
+      // The orphaned npmdata section should have been removed from orphan-subdir/.gitignore
       // (the file may be deleted entirely if it had no other content)
       const orphanGitignorePath = path.join(orphanDir, '.gitignore');
       const orphanGitignoreExists = fs.existsSync(orphanGitignorePath);
       const orphanGitignoreContent = orphanGitignoreExists
         ? fs.readFileSync(orphanGitignorePath, 'utf8')
         : '';
-      expect(orphanGitignoreContent).not.toContain('# npmdist:start');
+      expect(orphanGitignoreContent).not.toContain('# npmdata:start');
     });
 
     it('should clean up empty marker files left by prior operations', async () => {

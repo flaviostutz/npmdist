@@ -1,4 +1,4 @@
-# npmdist
+# npmdata
 
 Publish folders as npm packages and extract them in any workspace. Use it to distribute shared assets — ML datasets, documentation, ADRs, configuration files — across multiple projects through any npm-compatible registry.
 
@@ -14,7 +14,7 @@ Publish folders as npm packages and extract them in any workspace. Use it to dis
 In the project whose folders you want to share:
 
 ```sh
-pnpm dlx npmdist init --folders "docs,data,configs"
+pnpm dlx npmdata init --folders "docs,data,configs"
 ```
 
 This updates `package.json` with the right `files`, `bin`, and `dependencies` fields. Then publish normally:
@@ -29,16 +29,16 @@ npm publish
 
 ```sh
 # extract all files from the package
-npx npmdist extract --package my-shared-assets --output ./data
+npx npmdata extract --package my-shared-assets --output ./data
 
 # extract a specific version
-npx npmdist extract --package my-shared-assets --version "^2.0.0" --output ./data
+npx npmdata extract --package my-shared-assets --version "^2.0.0" --output ./data
 
 # extract only markdown files
-npx npmdist extract --package my-shared-assets --files "**/*.md" --output ./docs
+npx npmdata extract --package my-shared-assets --files "**/*.md" --output ./docs
 
 # also write .gitignore entries for managed files
-npx npmdist extract --package my-shared-assets --output ./data --gitignore
+npx npmdata extract --package my-shared-assets --output ./data --gitignore
 ```
 
 If the published package includes its own bin script (normally when it's prepared using "init") you can also call it directly so it extracts data that is inside the package itself:
@@ -53,7 +53,7 @@ Check the /examples folder to see this in action
 ### 3. Check files are in sync
 
 ```sh
-npx npmdist check --package my-shared-assets --output ./data
+npx npmdata check --package my-shared-assets --output ./data
 # exit 0 = in sync, exit 2 = differences found
 ```
 
@@ -61,7 +61,7 @@ npx npmdist check --package my-shared-assets --output ./data
 
 ```
 Usage:
-  npx npmdist [init|extract|check] [options]
+  npx npmdata [init|extract|check] [options]
 
 Commands:
   init      Set up publishing configuration in a package
@@ -87,10 +87,10 @@ Extract / Check options:
 
 ## Library usage
 
-`npmdist` also exports a programmatic API:
+`npmdata` also exports a programmatic API:
 
 ```typescript
-import { extract, check, initPublisher } from 'npmdist';
+import { extract, check, initPublisher } from 'npmdata';
 
 // extract files
 const result = await extract({

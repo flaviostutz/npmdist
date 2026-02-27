@@ -31,13 +31,13 @@ import {
 
 const MARKER_FILE = '.publisher';
 const GITIGNORE_FILE = '.gitignore';
-const GITIGNORE_START = '# npmdist:start';
-const GITIGNORE_END = '# npmdist:end';
+const GITIGNORE_START = '# npmdata:start';
+const GITIGNORE_END = '# npmdata:end';
 
 /**
  * Update (or create) a .gitignore in the given directory so that the managed
  * files and the .publisher marker file are ignored by git.
- * If managedFilenames is empty the npmdist section is removed; if the
+ * If managedFilenames is empty the npmdata section is removed; if the
  * resulting file is empty it is deleted.
  * When addEntries is false, only existing sections are updated/removed — no new
  * section is written if one did not already exist.
@@ -90,7 +90,7 @@ function updateGitignoreForDir(dir: string, managedFilenames: string[], addEntri
 /**
  * Walk outputDir and update .gitignore files for every directory that has a
  * .publisher marker (to reflect its current managed files) and also clean up
- * any npmdist sections in directories where the marker was removed.
+ * any npmdata sections in directories where the marker was removed.
  * When addEntries is false, existing sections are updated/removed but no new
  * sections are created — use this to clean up without opting into gitignore management.
  */
@@ -113,7 +113,7 @@ function updateGitignores(outputDir: string, addEntries = true): void {
         // Ignore unreadable marker files
       }
     } else if (fs.existsSync(gitignorePath)) {
-      // Clean up any leftover npmdist section
+      // Clean up any leftover npmdata section
       updateGitignoreForDir(dir, [], addEntries);
     }
 

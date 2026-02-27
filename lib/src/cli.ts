@@ -13,7 +13,7 @@ import { initPublisher } from './publisher';
 import { getInstalledPackageVersion } from './utils';
 
 /**
- * CLI for npmdist
+ * CLI for npmdata
  */
 // eslint-disable-next-line complexity
 export async function cli(processArgs: string[]): Promise<number> {
@@ -193,10 +193,10 @@ export async function cli(processArgs: string[]): Promise<number> {
 
 function printUsage(): void {
   console.log(`
-npmdist
+npmdata
 
 Usage:
-  npx npmdist [init|extract|check] [options]
+  npx npmdata [init|extract|check] [options]
 
 Commands:
   init                         Initialize publishing configuration
@@ -220,10 +220,10 @@ Extract / Check Options:
   --output, -o <dir>           Output directory (default: current directory)
 
 Examples:
-  npx npmdist init --folders "data,docs,config"
-  npx npmdist extract --package mydataset --output ./data
-  npx npmdist extract --package mydataset --version "^2.0.0" --output ./data
-  npx npmdist extract --package mydataset --files "*.md,docs/**" --output ./docs
-  npx npmdist check --package mydataset --output ./data
+  npx npmdata init --folders "data,docs,config"
+  npx npmdata extract --package mydataset --output ./data
+  npx npmdata extract --package mydataset --version "^2.0.0" --output ./data
+  npx npmdata extract --package mydataset --files "*.md,docs/**" --output ./docs
+  npx npmdata check --package mydataset --output ./data
 `);
 }
