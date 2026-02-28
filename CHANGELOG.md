@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.2.1 (2026-02-28)
+
+### Maintenance
+
+* adding message [[e1ee1eb](https://github.com/flaviostutz/npmdata/commit/e1ee1eb2544e98e3a5c3c3f918c78689b5e98042)]
+
+### Misc
+
+
+### Info
+
+* Authors: Flavio Stutz <flaviostutz@gmail.com>
+
+
 ## 0.2.0 (2026-02-22)
 
 ### Features
