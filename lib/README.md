@@ -111,6 +111,69 @@ To use tags, add a `tags` array to each `npmdata` entry in the data package's `p
 
 Check the /examples folder to see this in action
 
+### npmdata entry options reference
+
+Each entry in the `npmdata` array in `package.json` supports the following options:
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `package` | `string` | required | Package spec to install and extract. Either a bare name (`my-pkg`) or with a semver constraint (`my-pkg@^1.2.3`). |
+| `outputDir` | `string` | required | Directory where files will be extracted, relative to where the consumer runs the command. |
+| `files` | `string[]` | all files | Glob patterns to filter which files are extracted (e.g. `["data/**", "*.json"]`). |
+| `contentRegexes` | `string[]` | none | Regex patterns (as strings) to filter files by content. Only files matching at least one pattern are extracted. |
+| `force` | `boolean` | `false` | Allow overwriting existing unmanaged files or files owned by a different package. |
+| `keepExisting` | `boolean` | `false` | Skip files that already exist but create them when absent. Cannot be combined with `force`. |
+| `gitignore` | `boolean` | `false` | Create/update a `.gitignore` file alongside each `.npmdata` marker file. |
+| `unmanaged` | `boolean` | `false` | Write files without a `.npmdata` marker, `.gitignore` update, or read-only flag. Existing files are skipped. |
+| `dryRun` | `boolean` | `false` | Simulate extraction without writing anything to disk. |
+| `upgrade` | `boolean` | `false` | Force a fresh install of the package even when a satisfying version is already installed. |
+| `silent` | `boolean` | `false` | Suppress per-file output, printing only the final result line. |
+| `tags` | `string[]` | none | Tags used to group and selectively run entries with `--tags`. |
+| `symlinks` | `SymlinkConfig[]` | none | Post-extract symlink operations (see below). |
+| `contentReplacements` | `ContentReplacementConfig[]` | none | Post-extract content-replacement operations (see below). |
+
+#### SymlinkConfig
+
+After extraction, for each config the runner resolves all files/directories inside `outputDir` that match `source` and creates a corresponding symlink inside `target`. Stale symlinks pointing into `outputDir` but no longer matched are removed automatically.
+
+| Field | Type | Description |
+|---|---|---|
+| `source` | `string` | Glob pattern relative to `outputDir`. Every matching file or directory gets a symlink in `target`. Example: `"**\/skills\/**"` |
+| `target` | `string` | Directory where symlinks are created, relative to the project root. Example: `".github/skills"` |
+
+#### ContentReplacementConfig
+
+After extraction, for each config the runner finds workspace files matching `files` and applies the regex replacement to their contents.
+
+| Field | Type | Description |
+|---|---|---|
+| `files` | `string` | Glob pattern (relative to the project root) selecting workspace files to modify. Example: `"docs/**\/*.md"` |
+| `match` | `string` | Regex string locating the text to replace. Applied globally to all non-overlapping occurrences. Example: `"<!-- version: .* -->"` |
+| `replace` | `string` | Replacement string. May contain regex back-references such as `$1`. Example: `"<!-- version: 1.2.3 -->"` |
+
+Example with multiple options:
+
+```json
+{
+  "npmdata": [
+    {
+      "package": "my-shared-assets@^2.0.0",
+      "outputDir": "./data",
+      "files": ["docs/**", "configs/*.json"],
+      "gitignore": true,
+      "upgrade": true,
+      "tags": ["prod"],
+      "symlinks": [
+        { "source": "**\/skills\/**", "target": ".github/skills" }
+      ],
+      "contentReplacements": [
+        { "files": "docs/**\/*.md", "match": "<!-- version: .* -->", "replace": "<!-- version: 2.0.0 -->" }
+      ]
+    }
+  ]
+}
+```
+
 ### 3. Check files are in sync
 
 ```sh
