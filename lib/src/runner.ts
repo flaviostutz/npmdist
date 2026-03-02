@@ -22,8 +22,12 @@ function parseEntryPackageName(spec: string): { name: string } {
   return { name };
 }
 
-function buildExtractCommand(cliPath: string, entry: NpmdataExtractEntry): string {
-  const outputFlag = ` --output "${entry.outputDir}"`;
+function buildExtractCommand(
+  cliPath: string,
+  entry: NpmdataExtractEntry,
+  cwd: string = process.cwd(),
+): string {
+  const outputFlag = ` --output "${path.resolve(cwd, entry.outputDir)}"`;
   const forceFlag = entry.force ? ' --force' : '';
   const keepExistingFlag = entry.keepExisting ? ' --keep-existing' : '';
   const gitignoreFlag = entry.gitignore === false ? ' --no-gitignore' : '';
@@ -44,9 +48,13 @@ function buildExtractCommand(cliPath: string, entry: NpmdataExtractEntry): strin
  * Build a CLI command string that purges (removes) all managed files for the entry's package
  * from its output directory. No package installation is required.
  */
-export function buildPurgeCommand(cliPath: string, entry: NpmdataExtractEntry): string {
+export function buildPurgeCommand(
+  cliPath: string,
+  entry: NpmdataExtractEntry,
+  cwd: string = process.cwd(),
+): string {
   const { name } = parseEntryPackageName(entry.package);
-  const outputFlag = ` --output "${entry.outputDir}"`;
+  const outputFlag = ` --output "${path.resolve(cwd, entry.outputDir)}"`;
   // Propagate silent/dry-run settings from the entry if present.
   const silentFlag = entry.silent ? ' --silent' : '';
   const dryRunFlag = entry.dryRun ? ' --dry-run' : '';
@@ -415,18 +423,19 @@ export function run(binDir: string, argv: string[] = process.argv): void {
     requestedTags.length > 0 ? allEntries.filter((e) => !entries.includes(e)) : [];
 
   const cliPath = require.resolve('npmdata/dist/main.js', { paths: [binDir] });
+  const runCwd = process.cwd();
 
   for (const entry of entries) {
-    const command = buildExtractCommand(cliPath, entry);
-    execSync(command, { stdio: 'inherit' });
-    applySymlinks(entry, process.cwd());
-    applyContentReplacements(entry, process.cwd());
+    const command = buildExtractCommand(cliPath, entry, runCwd);
+    execSync(command, { stdio: 'inherit', cwd: runCwd });
+    applySymlinks(entry, runCwd);
+    applyContentReplacements(entry, runCwd);
   }
 
   // When a tag filter is active, purge managed files from excluded entries so that
   // the output directory contains only files from the currently active tag group.
   for (const entry of excludedEntries) {
-    const command = buildPurgeCommand(cliPath, entry);
-    execSync(command, { stdio: 'inherit' });
+    const command = buildPurgeCommand(cliPath, entry, runCwd);
+    execSync(command, { stdio: 'inherit', cwd: runCwd });
   }
 }

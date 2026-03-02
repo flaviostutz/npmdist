@@ -61,7 +61,7 @@ describe('runner', () => {
 
       expect(mockExecSync).toHaveBeenCalledTimes(1);
       expect(capturedCommand()).toContain('--packages "my-pkg"');
-      expect(capturedCommand()).toContain('--output "."');
+      expect(capturedCommand()).toContain(`--output "${path.resolve('.')}"`);
     });
 
     it('uses a single default entry when npmdata is an empty array', () => {
@@ -87,12 +87,46 @@ describe('runner', () => {
       expect(mockExecSync).toHaveBeenCalledTimes(2);
     });
 
-    it('passes stdio:inherit to execSync', () => {
+    it('passes stdio:inherit and cwd to execSync', () => {
       setupPackageJson({ name: 'my-pkg' });
 
       run(BIN_DIR, EXTRACT_ARGV);
 
-      expect(mockExecSync).toHaveBeenCalledWith(expect.any(String), { stdio: 'inherit' });
+      expect(mockExecSync).toHaveBeenCalledWith(expect.any(String), {
+        stdio: 'inherit',
+        cwd: expect.any(String),
+      });
+    });
+
+    it('passes the current working directory as cwd to execSync', () => {
+      setupPackageJson({ name: 'my-pkg' });
+
+      run(BIN_DIR, EXTRACT_ARGV);
+
+      const callOptions = mockExecSync.mock.calls[0][1] as { cwd?: string };
+      expect(callOptions.cwd).toBe(process.cwd());
+    });
+
+    it('resolves a relative outputDir to an absolute path in the extract command', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [{ package: 'my-pkg', outputDir: 'data' }],
+      });
+
+      run(BIN_DIR, EXTRACT_ARGV);
+
+      expect(capturedCommand()).toContain(`--output "${path.resolve(process.cwd(), 'data')}"`);
+    });
+
+    it('resolves dot outputDir to the current working directory in the extract command', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [{ package: 'my-pkg', outputDir: '.' }],
+      });
+
+      run(BIN_DIR, EXTRACT_ARGV);
+
+      expect(capturedCommand()).toContain(`--output "${process.cwd()}"`);
     });
 
     it('resolves the CLI path and embeds it in the command', () => {
@@ -126,7 +160,7 @@ describe('runner', () => {
 
       const cmd = capturedCommand();
       expect(cmd).toContain('--packages "my-pkg"');
-      expect(cmd).toContain('--output "./out"');
+      expect(cmd).toContain(`--output "${path.resolve('./out')}"`);
       expect(cmd).not.toContain('--force');
       expect(cmd).not.toContain('--no-gitignore');
       expect(cmd).not.toContain('--unmanaged');
@@ -346,7 +380,7 @@ describe('runner', () => {
 
       const cmd = capturedCommand();
       expect(cmd).toContain('--packages "full-pkg@^2.0.0"');
-      expect(cmd).toContain('--output "./data"');
+      expect(cmd).toContain(`--output "${path.resolve('./data')}"`);
       expect(cmd).toContain(' --force');
       expect(cmd).toContain(' --no-gitignore');
       expect(cmd).toContain(' --silent');
@@ -643,38 +677,63 @@ describe('runner', () => {
 
   describe('buildPurgeCommand', () => {
     const CLI_PATH = '/path/to/main.js';
+    const PURGE_CWD = '/my/project';
 
-    it('builds a purge command with package name and output dir', () => {
+    it('builds a purge command with package name and resolved absolute output dir', () => {
       const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: './out' };
-      const cmd = buildPurgeCommand(CLI_PATH, entry);
+      const cmd = buildPurgeCommand(CLI_PATH, entry, PURGE_CWD);
       expect(cmd).toContain('purge');
       expect(cmd).toContain('--packages "my-pkg"');
-      expect(cmd).toContain('--output "./out"');
+      expect(cmd).toContain('--output "/my/project/out"');
+    });
+
+    it('resolves a relative outputDir to an absolute path', () => {
+      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: 'data' };
+      const cmd = buildPurgeCommand(CLI_PATH, entry, '/project/root');
+      expect(cmd).toContain('--output "/project/root/data"');
+    });
+
+    it('resolves dot outputDir to the cwd itself', () => {
+      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: '.' };
+      const cmd = buildPurgeCommand(CLI_PATH, entry, '/project/root');
+      expect(cmd).toContain('--output "/project/root"');
+    });
+
+    it('resolves an absolute outputDir as-is, ignoring cwd', () => {
+      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: '/absolute/path' };
+      const cmd = buildPurgeCommand(CLI_PATH, entry, '/project/root');
+      expect(cmd).toContain('--output "/absolute/path"');
     });
 
     it('strips version specifier from the package name', () => {
       const entry: NpmdataExtractEntry = { package: 'my-pkg@^2.0.0', outputDir: '.' };
-      const cmd = buildPurgeCommand(CLI_PATH, entry);
+      const cmd = buildPurgeCommand(CLI_PATH, entry, PURGE_CWD);
       expect(cmd).toContain('--packages "my-pkg"');
       expect(cmd).not.toContain('2.0.0');
     });
 
     it('adds --silent when entry has silent: true', () => {
       const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: '.', silent: true };
-      const cmd = buildPurgeCommand(CLI_PATH, entry);
+      const cmd = buildPurgeCommand(CLI_PATH, entry, PURGE_CWD);
       expect(cmd).toContain(' --silent');
     });
 
     it('adds --dry-run when entry has dryRun: true', () => {
       const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: '.', dryRun: true };
-      const cmd = buildPurgeCommand(CLI_PATH, entry);
+      const cmd = buildPurgeCommand(CLI_PATH, entry, PURGE_CWD);
       expect(cmd).toContain(' --dry-run');
     });
 
     it('uses node and the provided CLI path', () => {
       const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: '.' };
-      const cmd = buildPurgeCommand(CLI_PATH, entry);
+      const cmd = buildPurgeCommand(CLI_PATH, entry, PURGE_CWD);
       expect(cmd).toMatch(/node ".+main\.js"/);
+    });
+
+    it('uses process.cwd() as default cwd when none is provided', () => {
+      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: 'out' };
+      const cmd = buildPurgeCommand(CLI_PATH, entry);
+      expect(cmd).toContain(`--output "${path.resolve(process.cwd(), 'out')}"`);
     });
   });
 
