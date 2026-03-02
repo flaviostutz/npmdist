@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.6.0 (2026-03-02)
+
+### Features
+
+* support to outputdir in runner mode [[c59d0b5](https://github.com/flaviostutz/npmdata/commit/c59d0b5c7193e168557c14021327fe311e8ca713)]
+
+### Maintenance
+
+* release: 0.5.1-beta.0 [[1fa5a29](https://github.com/flaviostutz/npmdata/commit/1fa5a29017fe3b9274d222bfda4cfb8e5390ac5f)]
+* enhance documentation [[02fc795](https://github.com/flaviostutz/npmdata/commit/02fc795b171677370f24b44972f8eae29d584511)]
+* enhancing readme [[26d0afa](https://github.com/flaviostutz/npmdata/commit/26d0afa2c7bae8f43297a80204912430d8a50801)]
+* fix output dir bug [[f44d362](https://github.com/flaviostutz/npmdata/commit/f44d3624e1464b92967a5b90e3bf3a46814b5d93)]
+* update docs with npmdata config details [[db21e70](https://github.com/flaviostutz/npmdata/commit/db21e7021851b9f8987b3a68d7f7afd0da8831a0)]
+
+### Misc
+
+
+### Info
+
+* Authors: Flavio Stutz <flaviostutz@gmail.com>
+
+
 ## 0.5.1 (2026-03-02)
 
 ### Maintenance
