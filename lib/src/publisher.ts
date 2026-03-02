@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { readJsonFile, writeJsonFile, parsePackageSpec } from './utils';
-import { PublishablePackageJson } from './types';
+import { PublishablePackageJson, NpmdataExtractEntry } from './types';
 
 /**
  * Read the version of the currently running npmdata package so we can pin it
@@ -123,20 +123,37 @@ function preparePackageJson(
   }
   packageJson.dependencies.npmdata = getOwnVersion();
 
-  // Merge additional packages: preserve existing entries, add new ones without duplicates
-  const existingAdditional = packageJson.npmdata?.additionalPackages ?? [];
-  const mergedAdditional = Array.from(new Set([...existingAdditional, ...additionalPackages]));
+  // Build npmdata entries array: one entry per package (main + additional)
+  const existingEntries: NpmdataExtractEntry[] = Array.isArray(packageJson.npmdata)
+    ? (packageJson.npmdata as NpmdataExtractEntry[])
+    : [];
 
-  // Store additional packages config and add them to dependencies
-  if (mergedAdditional.length > 0) {
-    packageJson.npmdata = { ...packageJson.npmdata, additionalPackages: mergedAdditional };
-    for (const pkgSpec of mergedAdditional) {
-      const { name: pkgName, version: pkgVersion } = parsePublisherPackageSpec(pkgSpec);
-      if (!packageJson.dependencies[pkgName]) {
-        packageJson.dependencies[pkgName] = pkgVersion;
-      }
+  // Ensure the main package has an entry
+  const mainName = packageJson.name;
+  const hasMainEntry = existingEntries.some((e) => {
+    const { name } = parsePackageSpec(e.package);
+    return name === mainName;
+  });
+  if (!hasMainEntry) {
+    existingEntries.push({ package: mainName, outputDir: '.' });
+  }
+
+  // Add additional packages as separate entries (dedup by package name)
+  for (const pkgSpec of additionalPackages) {
+    const { name: pkgName, version: pkgVersion } = parsePublisherPackageSpec(pkgSpec);
+    const alreadyPresent = existingEntries.some((e) => {
+      const { name } = parsePackageSpec(e.package);
+      return name === pkgName;
+    });
+    if (!alreadyPresent) {
+      existingEntries.push({ package: pkgSpec, outputDir: '.' });
+    }
+    if (!packageJson.dependencies[pkgName]) {
+      packageJson.dependencies[pkgName] = pkgVersion;
     }
   }
+
+  packageJson.npmdata = existingEntries;
 
   if (!packageJson.bin) {
     packageJson.bin = 'bin/npmdata.js';
@@ -181,13 +198,21 @@ export async function initPublisher(
     fs.writeFileSync(cliScriptPath, generateCliScript(), 'utf8');
     fs.chmodSync(cliScriptPath, 0o755);
 
-    const finalAdditionalPackages = packageJson.npmdata?.additionalPackages;
+    const allEntries = packageJson.npmdata as NpmdataExtractEntry[];
+    const finalAdditionalPackages = allEntries
+      .filter((e) => {
+        const { name } = parsePackageSpec(e.package);
+        return name !== packageJson.name;
+      })
+      .map((e) => e.package);
 
     return {
       success: true,
       message: 'npmdata: project initialization completed successfully',
       publishedFolders: folders,
-      additionalPackages: finalAdditionalPackages,
+      additionalPackages:
+        // eslint-disable-next-line no-undefined
+        finalAdditionalPackages.length > 0 ? finalAdditionalPackages : undefined,
       packageJsonPath,
     };
   } catch (error) {

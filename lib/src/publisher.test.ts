@@ -221,7 +221,9 @@ describe('Publisher', () => {
       expect(result.additionalPackages).toEqual(['shared-data@^1.0.0', 'other-pkg']);
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
-      expect(pkgJson.npmdata.additionalPackages).toEqual(['shared-data@^1.0.0', 'other-pkg']);
+      const entries = pkgJson.npmdata as Array<{ package: string }>;
+      expect(entries.some((e) => e.package === 'shared-data@^1.0.0')).toBe(true);
+      expect(entries.some((e) => e.package === 'other-pkg')).toBe(true);
     });
 
     it('should add additional packages to dependencies', async () => {
@@ -250,9 +252,8 @@ describe('Publisher', () => {
       });
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
-      const matches = pkgJson.npmdata.additionalPackages.filter(
-        (p: string) => p === 'shared-data@^1.0.0',
-      );
+      const entries = pkgJson.npmdata as Array<{ package: string }>;
+      const matches = entries.filter((e) => e.package === 'shared-data@^1.0.0');
       expect(matches).toHaveLength(1);
     });
 
@@ -269,8 +270,9 @@ describe('Publisher', () => {
       });
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
-      expect(pkgJson.npmdata.additionalPackages).toContain('pkg-a');
-      expect(pkgJson.npmdata.additionalPackages).toContain('pkg-b');
+      const entries = pkgJson.npmdata as Array<{ package: string }>;
+      expect(entries.some((e) => e.package === 'pkg-a')).toBe(true);
+      expect(entries.some((e) => e.package === 'pkg-b')).toBe(true);
     });
 
     it('should handle scoped package names in additionalPackages', async () => {
@@ -282,7 +284,8 @@ describe('Publisher', () => {
       });
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
-      expect(pkgJson.npmdata.additionalPackages).toContain('@my-org/shared-data@^2.0.0');
+      const entries = pkgJson.npmdata as Array<{ package: string }>;
+      expect(entries.some((e) => e.package === '@my-org/shared-data@^2.0.0')).toBe(true);
       expect(pkgJson.dependencies['@my-org/shared-data']).toBe('^2.0.0');
     });
 
@@ -295,7 +298,11 @@ describe('Publisher', () => {
       expect(result.additionalPackages).toBeUndefined();
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
-      expect(pkgJson.npmdata).toBeUndefined();
+      const entries = pkgJson.npmdata as Array<{ package: string; outputDir: string }>;
+      expect(Array.isArray(entries)).toBe(true);
+      expect(entries).toHaveLength(1);
+      expect(entries[0].package).toBe(pkgJson.name);
+      expect(entries[0].outputDir).toBe('.');
     });
   });
 });

@@ -69,8 +69,8 @@ export type ConsumerConfig = FileFilterConfig & {
   cwd?: string;
 
   /**
-   * Automatically create/update a .gitignore file alongside each .publisher marker file,
-   * adding the managed files and the .publisher file itself to be ignored by git.
+   * Automatically create/update a .gitignore file alongside each .npmdata marker file,
+   * adding the managed files and the .npmdata file itself to be ignored by git.
    */
   gitignore?: boolean;
 
@@ -152,7 +152,7 @@ export type CheckResult = {
    */
   differences: {
     /**
-     * Files that are in the .publisher marker but missing from the output directory
+     * Files that are in the .npmdata marker but missing from the output directory
      */
     missing: string[];
 
@@ -183,15 +183,59 @@ export type CheckResult = {
 };
 
 /**
- * npmdata-specific configuration stored inside the publishable package.json
+ * A single extraction entry defined in the publishable package.json "npmdata" array.
+ * The runner iterates over these entries and calls extract() for each one.
  */
-export type NpmdataConfig = {
+export type NpmdataExtractEntry = {
   /**
-   * Additional package specs to include as data sources when the CLI script runs.
-   * Each entry is a bare package name ("my-pkg") or a name with a semver constraint
-   * ("my-pkg@^1.2.3"). These are merged with the package's own name when extracting.
+   * Package spec to install and extract from. Either a bare name ("my-pkg") or a
+   * name with a semver constraint ("my-pkg@^1.2.3").
    */
-  additionalPackages?: string[];
+  package: string;
+
+  /**
+   * Output directory where files will be extracted, relative to where the consumer
+   * runs the command (e.g. "./data" or "src/generated").
+   */
+  outputDir: string;
+
+  /**
+   * Glob patterns to filter which files are extracted (e.g. ["data/**", "*.json"]).
+   * Defaults to all files when not set.
+   */
+  files?: string[];
+
+  /**
+   * Allow overwriting existing unmanaged files (default: false).
+   */
+  force?: boolean;
+
+  /**
+   * Create/update a .gitignore file alongside each .npmdata marker file (default: false).
+   */
+  gitignore?: boolean;
+
+  /**
+   * Simulate extraction without writing anything to disk (default: false).
+   */
+  dryRun?: boolean;
+
+  /**
+   * Force a fresh install of the package even when a satisfying version is already
+   * installed (default: false).
+   */
+  upgrade?: boolean;
+
+  /**
+   * Suppress per-file output, printing only the final result line (default: false).
+   */
+  silent?: boolean;
+
+  /**
+   * Regex patterns (as strings) to filter files by content. Only files whose content
+   * matches at least one pattern are extracted.
+   */
+  contentRegexes?: string[];
 };
 
 /**
@@ -205,6 +249,6 @@ export type PublishablePackageJson = {
   bin?: string;
   files?: string[];
   dependencies?: Record<string, string>;
-  npmdata?: NpmdataConfig;
+  npmdata?: NpmdataExtractEntry[];
   [key: string]: unknown;
 };

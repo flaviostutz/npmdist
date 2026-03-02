@@ -294,7 +294,7 @@ Extract / Check Options:
                                e.g. "my-pkg@^1.2.3,other-pkg@2.x"
   --output, -o <dir>           Output directory (default: current directory, with a warning)
   --force                      Allow overwriting existing unmanaged files
-  --gitignore                  Create/update .gitignore to ignore managed files and .publisher
+  --gitignore                  Create/update .gitignore to ignore managed files and .npmdata
   --dry-run                    Simulate extraction without writing any files
   --upgrade                    Re-install packages even when a satisfying version is installed
   --silent                     Print only the final result line, suppressing package and file listing

@@ -208,7 +208,7 @@ export function writeJsonFile(filePath: string, data: unknown): void {
 const MARKER_DELIMITER = '|';
 
 /**
- * Read the .publisher marker file.
+ * Read the .npmdata marker file.
  * Supports both the current pipe-delimited format and the legacy comma-delimited format
  * (detected automatically for backward compatibility).
  */
@@ -229,7 +229,7 @@ export function readCsvMarker(filePath: string): ManagedFileMetadata[] {
 }
 
 /**
- * Write the .publisher marker file using the pipe-delimited format.
+ * Write the .npmdata marker file using the pipe-delimited format.
  */
 export function writeCsvMarker(filePath: string, data: ManagedFileMetadata[]): void {
   ensureDir(path.dirname(filePath));

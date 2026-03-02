@@ -51,15 +51,15 @@ describe('Consumer', () => {
       expect(fs.existsSync(path.join(outputDir, 'src', 'index.ts'))).toBe(true);
 
       // Verify marker was created
-      expect(fs.existsSync(path.join(outputDir, '.publisher'))).toBe(true);
+      expect(fs.existsSync(path.join(outputDir, '.npmdata'))).toBe(true);
 
-      const rootMarker = readCsvMarker(path.join(outputDir, '.publisher'));
+      const rootMarker = readCsvMarker(path.join(outputDir, '.npmdata'));
       expect(rootMarker.some((m) => m.packageName === 'test-extract-package')).toBe(true);
 
-      const docsMarker = readCsvMarker(path.join(outputDir, 'docs', '.publisher'));
+      const docsMarker = readCsvMarker(path.join(outputDir, 'docs', '.npmdata'));
       expect(docsMarker[0].packageName).toBe('test-extract-package');
 
-      const srcMarker = readCsvMarker(path.join(outputDir, 'src', '.publisher'));
+      const srcMarker = readCsvMarker(path.join(outputDir, 'src', '.npmdata'));
       expect(srcMarker[0].packageName).toBe('test-extract-package');
     });
 
@@ -205,7 +205,7 @@ describe('Consumer', () => {
       expect(fs.readFileSync(path.join(outputDir, 'config.md'), 'utf8')).toBe(originalContent);
 
       // No marker file must have been created
-      expect(fs.existsSync(path.join(outputDir, '.publisher'))).toBe(false);
+      expect(fs.existsSync(path.join(outputDir, '.npmdata'))).toBe(false);
     });
 
     it('should overwrite unmanaged file and track it in the marker when force is true', async () => {
@@ -238,7 +238,7 @@ describe('Consumer', () => {
       expect(result.added).not.toContain('overwrite.md');
 
       // Marker must record the file as owned by this package
-      const marker = readCsvMarker(path.join(outputDir, '.publisher'));
+      const marker = readCsvMarker(path.join(outputDir, '.npmdata'));
       expect(
         marker.some(
           (m) => m.packageName === 'test-conflict-force-package' && m.path === 'overwrite.md',
@@ -290,7 +290,7 @@ describe('Consumer', () => {
         cwd: tmpDir,
       });
 
-      const markerBefore = readCsvMarker(path.join(outputDir, 'docs', '.publisher'));
+      const markerBefore = readCsvMarker(path.join(outputDir, 'docs', '.npmdata'));
       expect(markerBefore.some((m) => m.path === 'file2.md')).toBe(true);
 
       // Reinstall package with file2 removed
@@ -309,7 +309,7 @@ describe('Consumer', () => {
       expect(fs.existsSync(path.join(outputDir, 'docs', 'file2.md'))).toBe(false);
 
       // metadata must no longer reference file2
-      const markerAfter = readCsvMarker(path.join(outputDir, 'docs', '.publisher'));
+      const markerAfter = readCsvMarker(path.join(outputDir, 'docs', '.npmdata'));
       expect(markerAfter.some((m) => m.path === 'file2.md')).toBe(false);
       // file1 must still be tracked
       expect(markerAfter.some((m) => m.path === 'file1.md')).toBe(true);
@@ -336,7 +336,7 @@ describe('Consumer', () => {
       });
 
       expect(fs.existsSync(path.join(outputDir, 'docs', 'guide.md'))).toBe(true);
-      expect(fs.existsSync(path.join(outputDir, 'docs', '.publisher'))).toBe(true);
+      expect(fs.existsSync(path.join(outputDir, 'docs', '.npmdata'))).toBe(true);
 
       // Reinstall with an empty package (all files removed from the data package)
       await installMockPackage('test-full-cleanup-package', {}, tmpDir);
@@ -354,7 +354,7 @@ describe('Consumer', () => {
       expect(fs.existsSync(path.join(outputDir, 'docs', 'api.md'))).toBe(false);
 
       // Marker file must be removed because the directory has no managed files left
-      expect(fs.existsSync(path.join(outputDir, 'docs', '.publisher'))).toBe(false);
+      expect(fs.existsSync(path.join(outputDir, 'docs', '.npmdata'))).toBe(false);
 
       // Directory itself must be removed because it is now empty
       expect(fs.existsSync(path.join(outputDir, 'docs'))).toBe(false);
@@ -381,7 +381,7 @@ describe('Consumer', () => {
       const unmanagedFile = path.join(outputDir, 'docs', 'unmanaged.md');
       fs.writeFileSync(unmanagedFile, '# Unmanaged');
 
-      expect(fs.existsSync(path.join(outputDir, 'docs', '.publisher'))).toBe(true);
+      expect(fs.existsSync(path.join(outputDir, 'docs', '.npmdata'))).toBe(true);
 
       // Reinstall with an empty package (managed file dropped)
       await installMockPackage('test-unmanaged-coexist-package', {}, tmpDir);
@@ -398,14 +398,14 @@ describe('Consumer', () => {
       expect(fs.existsSync(path.join(outputDir, 'docs', 'managed.md'))).toBe(false);
 
       // Marker file must be removed because no managed files remain in this directory
-      expect(fs.existsSync(path.join(outputDir, 'docs', '.publisher'))).toBe(false);
+      expect(fs.existsSync(path.join(outputDir, 'docs', '.npmdata'))).toBe(false);
 
       // Unmanaged file and directory must still exist
       expect(fs.existsSync(unmanagedFile)).toBe(true);
       expect(fs.existsSync(path.join(outputDir, 'docs'))).toBe(true);
     });
 
-    it('should create .gitignore with managed files and .publisher when gitignore is true', async () => {
+    it('should create .gitignore with managed files and .npmdata when gitignore is true', async () => {
       const outputDir = path.join(tmpDir, 'output');
 
       await installMockPackage(
@@ -427,16 +427,16 @@ describe('Consumer', () => {
         filenamePatterns: ['**'],
       });
 
-      // Root .gitignore should contain .publisher and the managed file
+      // Root .gitignore should contain .npmdata and the managed file
       const rootGitignore = fs.readFileSync(path.join(outputDir, '.gitignore'), 'utf8');
-      expect(rootGitignore).toContain('.publisher');
+      expect(rootGitignore).toContain('.npmdata');
       expect(rootGitignore).toContain('README.md');
       expect(rootGitignore).toContain('# npmdata:start');
       expect(rootGitignore).toContain('# npmdata:end');
 
-      // docs/.gitignore should contain .publisher and both managed docs files
+      // docs/.gitignore should contain .npmdata and both managed docs files
       const docsGitignore = fs.readFileSync(path.join(outputDir, 'docs', '.gitignore'), 'utf8');
-      expect(docsGitignore).toContain('.publisher');
+      expect(docsGitignore).toContain('.npmdata');
       expect(docsGitignore).toContain('guide.md');
       expect(docsGitignore).toContain('api.md');
     });
@@ -478,7 +478,7 @@ describe('Consumer', () => {
       expect(content).toContain('node_modules');
       expect(content).toContain('*.log');
       // Managed section must be present
-      expect(content).toContain('.publisher');
+      expect(content).toContain('.npmdata');
       expect(content).toContain('data.json');
     });
 
@@ -628,8 +628,8 @@ describe('Consumer', () => {
       expect(fs.existsSync(path.join(outputDir, 'docs', 'a-guide.md'))).toBe(true);
       expect(fs.existsSync(path.join(outputDir, 'docs', 'b-guide.md'))).toBe(true);
 
-      // The docs/.publisher marker must carry entries for both packages
-      const marker = readCsvMarker(path.join(outputDir, 'docs', '.publisher'));
+      // The docs/.npmdata marker must carry entries for both packages
+      const marker = readCsvMarker(path.join(outputDir, 'docs', '.npmdata'));
       expect(marker.some((m) => m.packageName === 'pkg-coexist-a' && m.path === 'a-guide.md')).toBe(
         true,
       );
@@ -670,7 +670,7 @@ describe('Consumer', () => {
       expect(fs.existsSync(path.join(outputDir, 'docs', 'a-file.md'))).toBe(true);
 
       // Package-a's marker entry must still be present
-      const marker = readCsvMarker(path.join(outputDir, 'docs', '.publisher'));
+      const marker = readCsvMarker(path.join(outputDir, 'docs', '.npmdata'));
       expect(
         marker.some((m) => m.packageName === 'pkg-reextract-a' && m.path === 'a-file.md'),
       ).toBe(true);
@@ -703,7 +703,7 @@ describe('Consumer', () => {
       expect(fs.existsSync(path.join(outputDir, 'docs', 'b-keep.md'))).toBe(true);
 
       // Marker must only contain package-b's entry
-      const marker = readCsvMarker(path.join(outputDir, 'docs', '.publisher'));
+      const marker = readCsvMarker(path.join(outputDir, 'docs', '.npmdata'));
       expect(marker.some((m) => m.packageName === 'pkg-drop-a')).toBe(false);
       expect(marker.some((m) => m.packageName === 'pkg-drop-b' && m.path === 'b-keep.md')).toBe(
         true,
@@ -793,7 +793,7 @@ describe('Consumer', () => {
         cwd: tmpDir,
       });
 
-      const markerBefore = readCsvMarker(path.join(outputDir, 'docs', '.publisher'));
+      const markerBefore = readCsvMarker(path.join(outputDir, 'docs', '.npmdata'));
       expect(markerBefore.some((m) => m.packageName === 'pkg-force-owner-a')).toBe(true);
 
       // Second extraction with force: pkg-force-owner-b should take ownership
@@ -813,7 +813,7 @@ describe('Consumer', () => {
       expect(result.modified).toContain('docs/shared.md');
 
       // Marker must show pkg-force-owner-b as the sole owner; pkg-force-owner-a evicted
-      const markerAfter = readCsvMarker(path.join(outputDir, 'docs', '.publisher'));
+      const markerAfter = readCsvMarker(path.join(outputDir, 'docs', '.npmdata'));
       expect(markerAfter.some((m) => m.packageName === 'pkg-force-owner-b')).toBe(true);
       expect(markerAfter.some((m) => m.packageName === 'pkg-force-owner-a')).toBe(false);
     });
@@ -847,7 +847,7 @@ describe('Consumer', () => {
       const content = fs.readFileSync(path.join(outputDir, 'data', 'record.json'), 'utf8');
       expect(content).toBe('{"owner":"a"}');
 
-      const marker = readCsvMarker(path.join(outputDir, 'data', '.publisher'));
+      const marker = readCsvMarker(path.join(outputDir, 'data', '.npmdata'));
       expect(marker.some((m) => m.packageName === 'pkg-no-force-a')).toBe(true);
       expect(marker.some((m) => m.packageName === 'pkg-no-force-b')).toBe(false);
     });
@@ -883,7 +883,7 @@ describe('Consumer', () => {
       expect(result.added).toContain('docs/guide.md');
 
       // Marker must record the bare package name (no version suffix)
-      const marker = readCsvMarker(path.join(outputDir, 'docs', '.publisher'));
+      const marker = readCsvMarker(path.join(outputDir, 'docs', '.npmdata'));
       expect(marker[0].packageName).toBe('pkg-no-version-spec');
     });
 
@@ -904,7 +904,7 @@ describe('Consumer', () => {
       expect(result.added).toContain('docs/guide.md');
 
       // Marker must record the bare package name, not the full spec with version suffix
-      const marker = readCsvMarker(path.join(outputDir, 'docs', '.publisher'));
+      const marker = readCsvMarker(path.join(outputDir, 'docs', '.npmdata'));
       expect(marker[0].packageName).toBe('pkg-with-version-spec');
     });
 
@@ -983,10 +983,10 @@ describe('Consumer', () => {
       const outputDir = path.join(tmpDir, 'output');
       fs.mkdirSync(outputDir, { recursive: true });
 
-      // Create a subdirectory containing an orphaned .gitignore (no .publisher marker)
+      // Create a subdirectory containing an orphaned .gitignore (no .npmdata marker)
       const orphanDir = path.join(outputDir, 'orphan-subdir');
       fs.mkdirSync(orphanDir, { recursive: true });
-      const gitignoreContent = '# npmdata:start\n.publisher\norphan.md\n# npmdata:end\n';
+      const gitignoreContent = '# npmdata:start\n.npmdata\norphan.md\n# npmdata:end\n';
       fs.writeFileSync(path.join(orphanDir, '.gitignore'), gitignoreContent);
 
       // Extract a package whose file goes into outputDir root (not into orphan-subdir)
@@ -1014,8 +1014,8 @@ describe('Consumer', () => {
       const outputDir = path.join(tmpDir, 'output');
       fs.mkdirSync(outputDir, { recursive: true });
 
-      // Manually create an empty .publisher marker file
-      const markerPath = path.join(outputDir, '.publisher');
+      // Manually create an empty .npmdata marker file
+      const markerPath = path.join(outputDir, '.npmdata');
       fs.writeFileSync(markerPath, '\n');
 
       await installMockPackage('pkg-empty-marker', { 'file.md': '# File' }, tmpDir);
@@ -1028,8 +1028,8 @@ describe('Consumer', () => {
         cwd: tmpDir,
       });
 
-      // The root .publisher marker is now valid (has entries for pkg-empty-marker)
-      const marker = readCsvMarker(path.join(outputDir, '.publisher'));
+      // The root .npmdata marker is now valid (has entries for pkg-empty-marker)
+      const marker = readCsvMarker(path.join(outputDir, '.npmdata'));
       expect(marker.some((m) => m.packageName === 'pkg-empty-marker')).toBe(true);
     });
 
@@ -1273,7 +1273,7 @@ describe('Consumer', () => {
         dryRun: true,
       });
 
-      expect(fs.existsSync(path.join(outputDir, '.publisher'))).toBe(false);
+      expect(fs.existsSync(path.join(outputDir, '.npmdata'))).toBe(false);
     });
 
     it('should report correct counts in dry-run result', async () => {

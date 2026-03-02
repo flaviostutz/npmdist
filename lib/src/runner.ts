@@ -1,110 +1,47 @@
-/* eslint-disable functional/no-let */
+/* eslint-disable no-restricted-syntax */
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { NpmdataExtractEntry } from './types';
+
 type PackageJson = {
   name: string;
-  npmdata?: { additionalPackages?: string[] };
+  npmdata?: NpmdataExtractEntry[];
 };
 
-/**
- * Returns the owning package name plus any additional packages listed in
- * `npmdata.additionalPackages` of the package.json at the given path.
- */
-function collectPackages(pkgJsonPath: string): string[] {
-  const pkg = JSON.parse(fs.readFileSync(pkgJsonPath).toString()) as PackageJson;
-  const additional = pkg.npmdata?.additionalPackages ?? [];
-  return [pkg.name, ...additional];
-}
-
-type RunnerArgs = {
-  outputDir: string | undefined;
-  force: boolean;
-  gitignore: boolean;
-  silent: boolean;
-  dryRun: boolean;
-  upgrade: boolean;
-  files: string | undefined;
-  contentRegex: string | undefined;
-};
-
-function parseArgs(extraArgs: string[]): RunnerArgs {
-  let outputDir: string | undefined;
-  let force = false;
-  let gitignore = false;
-  let silent = false;
-  let dryRun = false;
-  let upgrade = false;
-  let files: string | undefined;
-  let contentRegex: string | undefined;
-  for (let i = 0; i < extraArgs.length; i += 1) {
-    if (extraArgs[i] === '--output' || extraArgs[i] === '-o') {
-      outputDir = extraArgs[i + 1];
-      i += 1;
-    } else if (extraArgs[i] === '--force') {
-      force = true;
-    } else if (extraArgs[i] === '--gitignore') {
-      gitignore = true;
-    } else if (extraArgs[i] === '--silent') {
-      silent = true;
-    } else if (extraArgs[i] === '--dry-run') {
-      dryRun = true;
-    } else if (extraArgs[i] === '--upgrade') {
-      upgrade = true;
-    } else if (extraArgs[i] === '--files') {
-      files = extraArgs[i + 1];
-      i += 1;
-    } else if (extraArgs[i] === '--content-regex') {
-      contentRegex = extraArgs[i + 1];
-      i += 1;
-    }
-  }
-  return { outputDir, force, gitignore, silent, dryRun, upgrade, files, contentRegex };
+function buildExtractCommand(cliPath: string, entry: NpmdataExtractEntry): string {
+  const outputFlag = ` --output "${entry.outputDir}"`;
+  const forceFlag = entry.force ? ' --force' : '';
+  const gitignoreFlag = entry.gitignore ? ' --gitignore' : '';
+  const silentFlag = entry.silent ? ' --silent' : '';
+  const dryRunFlag = entry.dryRun ? ' --dry-run' : '';
+  const upgradeFlag = entry.upgrade ? ' --upgrade' : '';
+  const filesFlag =
+    entry.files && entry.files.length > 0 ? ` --files "${entry.files.join(',')}"` : '';
+  const contentRegexFlag =
+    entry.contentRegexes && entry.contentRegexes.length > 0
+      ? ` --content-regex "${entry.contentRegexes.join(',')}"`
+      : '';
+  return `node "${cliPath}" extract --packages "${entry.package}"${outputFlag}${forceFlag}${gitignoreFlag}${silentFlag}${dryRunFlag}${upgradeFlag}${filesFlag}${contentRegexFlag}`;
 }
 
 /**
- * Runs the npmdata CLI (extract or check) on behalf of a publishable package.
+ * Runs extraction for each entry defined in the publishable package's package.json "npmdata" array.
+ * Invokes the npmdata CLI once per entry so that all CLI output and error handling is preserved.
  * Called from the minimal generated bin script with its own __dirname as binDir.
  */
 export function run(binDir: string): void {
   const pkgJsonPath = path.join(binDir, '../package.json');
-  const allPackages = collectPackages(pkgJsonPath);
+  const pkg = JSON.parse(fs.readFileSync(pkgJsonPath).toString()) as PackageJson;
 
-  const fpCliPath = require.resolve('npmdata/dist/main.js', {
-    paths: [binDir],
-  });
+  const entries: NpmdataExtractEntry[] =
+    pkg.npmdata && pkg.npmdata.length > 0 ? pkg.npmdata : [{ package: pkg.name, outputDir: '.' }];
 
-  const action = process.argv[2] ?? 'extract';
-  if (action !== 'extract' && action !== 'check' && action !== 'list') {
-    process.stderr.write(`Invalid action: "${action}". Must be "extract", "check", or "list".\n`);
-    // eslint-disable-next-line unicorn/no-process-exit
-    process.exit(1);
+  const cliPath = require.resolve('npmdata/dist/main.js', { paths: [binDir] });
+
+  for (const entry of entries) {
+    const command = buildExtractCommand(cliPath, entry);
+    execSync(command, { stdio: 'inherit' });
   }
-
-  const { outputDir, force, gitignore, silent, dryRun, upgrade, files, contentRegex } = parseArgs(
-    process.argv.slice(3),
-  );
-
-  const outputFlag = outputDir ? ` --output "${outputDir}"` : '';
-
-  let command: string;
-  if (action === 'list') {
-    command = `node "${fpCliPath}" list${outputFlag}`;
-  } else {
-    const forceFlag = force ? ' --force' : '';
-    const gitignoreFlag = gitignore ? ' --gitignore' : '';
-    const silentFlag = silent ? ' --silent' : '';
-    const dryRunFlag = dryRun ? ' --dry-run' : '';
-    const upgradeFlag = upgrade ? ' --upgrade' : '';
-    const filesFlag = files ? ` --files "${files}"` : '';
-    const contentRegexFlag = contentRegex ? ` --content-regex "${contentRegex}"` : '';
-    command = `node "${fpCliPath}" ${action} --packages "${allPackages.join(',')}"${outputFlag}${forceFlag}${gitignoreFlag}${silentFlag}${dryRunFlag}${upgradeFlag}${filesFlag}${contentRegexFlag}`;
-  }
-
-  process.on('uncaughtException', () => {
-    process.exit(3);
-  });
-
-  execSync(command, { stdio: 'inherit' });
 }

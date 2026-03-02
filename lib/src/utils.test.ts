@@ -465,7 +465,7 @@ describe('Utils', () => {
     ];
 
     it('should write and read back marker data with pipe delimiter', () => {
-      const markerPath = path.join(tmpDir, '.publisher');
+      const markerPath = path.join(tmpDir, '.npmdata');
       writeCsvMarker(markerPath, sampleData);
 
       const content = fs.readFileSync(markerPath, 'utf8');
@@ -486,7 +486,7 @@ describe('Utils', () => {
       const data: ManagedFileMetadata[] = [
         { path: 'my,file.md', packageName: 'pkg', packageVersion: '1.0.0', force: false },
       ];
-      const markerPath = path.join(tmpDir, '.publisher');
+      const markerPath = path.join(tmpDir, '.npmdata');
       writeCsvMarker(markerPath, data);
 
       const result = readCsvMarker(markerPath);
@@ -495,7 +495,7 @@ describe('Utils', () => {
     });
 
     it('should read legacy comma-delimited marker files for backward compatibility', () => {
-      const markerPath = path.join(tmpDir, '.publisher');
+      const markerPath = path.join(tmpDir, '.npmdata');
       // Write legacy comma-delimited format without pipe characters
       fs.writeFileSync(markerPath, 'old-file.md,old-pkg,2.0.0,0\n', 'utf8');
       fs.chmodSync(markerPath, 0o444);
@@ -508,7 +508,7 @@ describe('Utils', () => {
     });
 
     it('should make the marker file read-only after writing', () => {
-      const markerPath = path.join(tmpDir, '.publisher');
+      const markerPath = path.join(tmpDir, '.npmdata');
       writeCsvMarker(markerPath, sampleData);
 
       const stats = fs.statSync(markerPath);

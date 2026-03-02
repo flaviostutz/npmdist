@@ -30,14 +30,14 @@ import {
   parsePackageSpec,
 } from './utils';
 
-const MARKER_FILE = '.publisher';
+const MARKER_FILE = '.npmdata';
 const GITIGNORE_FILE = '.gitignore';
 const GITIGNORE_START = '# npmdata:start';
 const GITIGNORE_END = '# npmdata:end';
 
 /**
  * Update (or create) a .gitignore in the given directory so that the managed
- * files and the .publisher marker file are ignored by git.
+ * files and the .npmdata marker file are ignored by git.
  * If managedFilenames is empty the npmdata section is removed; if the
  * resulting file is empty it is deleted.
  * When addEntries is false, only existing sections are updated/removed — no new
@@ -90,7 +90,7 @@ function updateGitignoreForDir(dir: string, managedFilenames: string[], addEntri
 
 /**
  * Walk outputDir and update .gitignore files for every directory that has a
- * .publisher marker (to reflect its current managed files) and also clean up
+ * .npmdata marker (to reflect its current managed files) and also clean up
  * any npmdata sections in directories where the marker was removed.
  * When addEntries is false, existing sections are updated/removed but no new
  * sections are created — use this to clean up without opting into gitignore management.
@@ -610,7 +610,7 @@ export async function extract(config: ConsumerConfig): Promise<ConsumerResult> {
  * Check if managed files are in sync with published packages.
  *
  * Performs a bidirectional comparison:
- * - Files in the .publisher marker that are missing from or modified in the output directory.
+ * - Files in the .npmdata marker that are missing from or modified in the output directory.
  * - Files present in the package (matching filters) that have not been extracted yet ("extra").
  *
  * If a version constraint is specified (e.g. "my-pkg@^1.0.0"), the installed version is
