@@ -6,6 +6,7 @@ import path from 'node:path';
 import {
   run,
   parseTagsFromArgv,
+  parseOutputFromArgv,
   filterEntriesByTags,
   collectAllTags,
   printHelp,
@@ -146,6 +147,49 @@ describe('runner', () => {
       });
 
       expect(() => run(BIN_DIR, EXTRACT_ARGV)).toThrow('command failed');
+    });
+
+    it('uses --output dir as base when resolving outputDir in the extract command', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [{ package: 'my-pkg', outputDir: 'data' }],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'extract', '--output', '/custom/base']);
+
+      expect(capturedCommand()).toContain(`--output "${path.resolve('/custom/base', 'data')}"`);
+    });
+
+    it('uses -o shorthand as base when resolving outputDir', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [{ package: 'my-pkg', outputDir: 'data' }],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'extract', '-o', '/custom/base']);
+
+      expect(capturedCommand()).toContain(`--output "${path.resolve('/custom/base', 'data')}"`);
+    });
+
+    it('resolves a relative --output against process.cwd()', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [{ package: 'my-pkg', outputDir: 'data' }],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'extract', '--output', 'projects/myapp']);
+
+      const expectedBase = path.resolve(process.cwd(), 'projects/myapp');
+      expect(capturedCommand()).toContain(`--output "${path.resolve(expectedBase, 'data')}"`);
+    });
+
+    it('uses --output dir as cwd passed to execSync', () => {
+      setupPackageJson({ name: 'my-pkg' });
+
+      run(BIN_DIR, ['node', 'script.js', 'extract', '--output', '/custom/base']);
+
+      const callOptions = mockExecSync.mock.calls[0][1] as { cwd?: string };
+      expect(callOptions.cwd).toBe('/custom/base');
     });
   });
 
@@ -433,6 +477,38 @@ describe('runner', () => {
 
     it('filters out empty strings produced by trailing commas', () => {
       expect(parseTagsFromArgv(['node', 'script.js', '--tags', 'prod,'])).toEqual(['prod']);
+    });
+  });
+
+  describe('parseOutputFromArgv', () => {
+    it('returns undefined when --output is not present', () => {
+      expect(parseOutputFromArgv(['node', 'script.js', 'extract'])).toBeUndefined();
+    });
+
+    it('returns the value after --output', () => {
+      expect(parseOutputFromArgv(['node', 'script.js', '--output', '/some/dir'])).toBe('/some/dir');
+    });
+
+    it('returns the value after -o shorthand', () => {
+      expect(parseOutputFromArgv(['node', 'script.js', '-o', '/some/dir'])).toBe('/some/dir');
+    });
+
+    it('returns undefined when --output appears as the last argument with no value', () => {
+      expect(parseOutputFromArgv(['node', 'script.js', '--output'])).toBeUndefined();
+    });
+
+    it('works when --output appears alongside other flags', () => {
+      expect(
+        parseOutputFromArgv([
+          'node',
+          'script.js',
+          'extract',
+          '--tags',
+          'prod',
+          '--output',
+          './out',
+        ]),
+      ).toBe('./out');
     });
   });
 

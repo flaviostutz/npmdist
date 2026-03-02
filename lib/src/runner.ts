@@ -92,6 +92,7 @@ export function printHelp(packageName: string, availableTags: string[]): void {
       '',
       'Options:',
       '  --help              Show this help message',
+      '  --output, -o <dir>  Base directory for resolving all outputDir paths (default: cwd)',
       '  --tags <tag1,tag2>  Limit extraction to entries whose tags overlap (comma-separated)',
       '',
       `Available tags: ${tagsLine}`,
@@ -100,11 +101,30 @@ export function printHelp(packageName: string, availableTags: string[]): void {
       `  ${packageName} extract`,
       '    Extract files for all entries defined in package.json',
       '',
+      `  ${packageName} extract --output <dir>`,
+      '    Extract files, resolving all outputDir paths relative to <dir> instead of cwd',
+      '',
       `  ${packageName} extract --tags ${exampleTag}`,
       `    Extract files only for entries tagged "${exampleTag}"`,
       '',
+      `  ${packageName} extract --output <dir> --tags ${exampleTag}`,
+      `    Combine --output and --tags`,
+      '',
     ].join('\n'),
   );
+}
+
+/**
+ * Parses --output (or -o) from an argv array and returns the path string.
+ * Returns undefined when the flag is not present.
+ */
+export function parseOutputFromArgv(argv: string[]): string | undefined {
+  const idx = argv.findIndex((a) => a === '--output' || a === '-o');
+  if (idx === -1 || idx + 1 >= argv.length) {
+    // eslint-disable-next-line no-undefined
+    return undefined;
+  }
+  return argv[idx + 1];
 }
 
 /**
@@ -423,7 +443,8 @@ export function run(binDir: string, argv: string[] = process.argv): void {
     requestedTags.length > 0 ? allEntries.filter((e) => !entries.includes(e)) : [];
 
   const cliPath = require.resolve('npmdata/dist/main.js', { paths: [binDir] });
-  const runCwd = process.cwd();
+  const parsedOutput = parseOutputFromArgv(userArgs);
+  const runCwd = parsedOutput ? path.resolve(process.cwd(), parsedOutput) : process.cwd();
 
   for (const entry of entries) {
     const command = buildExtractCommand(cliPath, entry, runCwd);
