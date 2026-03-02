@@ -1,5 +1,7 @@
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 import {
   run,
@@ -8,6 +10,9 @@ import {
   collectAllTags,
   printHelp,
   buildPurgeCommand,
+  applySymlinks,
+  applyContentReplacements,
+  checkContentReplacements,
 } from './runner';
 import { NpmdataExtractEntry } from './types';
 
@@ -152,6 +157,28 @@ describe('runner', () => {
       run(BIN_DIR, EXTRACT_ARGV);
 
       expect(capturedCommand()).not.toContain('--force');
+    });
+
+    it('adds --keep-existing when keepExisting is true', () => {
+      setupPackageJson({
+        name: 'irrelevant',
+        npmdata: [{ package: 'my-pkg', outputDir: '.', keepExisting: true }],
+      });
+
+      run(BIN_DIR, EXTRACT_ARGV);
+
+      expect(capturedCommand()).toContain(' --keep-existing');
+    });
+
+    it('omits --keep-existing when keepExisting is false', () => {
+      setupPackageJson({
+        name: 'irrelevant',
+        npmdata: [{ package: 'my-pkg', outputDir: '.', keepExisting: false }],
+      });
+
+      run(BIN_DIR, EXTRACT_ARGV);
+
+      expect(capturedCommand()).not.toContain('--keep-existing');
     });
 
     it('omits --no-gitignore when gitignore is true', () => {
@@ -874,6 +901,351 @@ describe('runner', () => {
       expect(errOutput).toContain('bogus');
       stderrSpy.mockRestore();
       stdoutSpy.mockRestore();
+    });
+  });
+
+  // ─── applySymlinks ──────────────────────────────────────────────────────────
+  describe('applySymlinks', () => {
+    // eslint-disable-next-line functional/no-let
+    let tmpDir: string;
+
+    beforeEach(() => {
+      // These tests need real filesystem; restore readFileSync to the actual implementation.
+      mockReadFileSync.mockImplementation(jest.requireActual<typeof fs>('node:fs').readFileSync);
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'runner-symlinks-test-'));
+    });
+
+    afterEach(() => {
+      if (fs.existsSync(tmpDir)) {
+        fs.rmSync(tmpDir, { recursive: true });
+      }
+    });
+
+    it('does nothing when entry has no symlinks config', () => {
+      const entry: NpmdataExtractEntry = { package: 'pkg', outputDir: './out' };
+      // Should not throw
+      expect(() => applySymlinks(entry, tmpDir)).not.toThrow();
+    });
+
+    it('does nothing when symlinks array is empty', () => {
+      const entry: NpmdataExtractEntry = { package: 'pkg', outputDir: './out', symlinks: [] };
+      expect(() => applySymlinks(entry, tmpDir)).not.toThrow();
+    });
+
+    it('creates target directory if it does not exist', () => {
+      const outputDir = path.join(tmpDir, 'out');
+      fs.mkdirSync(outputDir, { recursive: true });
+      fs.mkdirSync(path.join(outputDir, 'skills', 'skill-a'), { recursive: true });
+
+      const targetDir = path.join(tmpDir, '.github', 'skills');
+      const entry: NpmdataExtractEntry = {
+        package: 'pkg',
+        outputDir: 'out',
+        symlinks: [{ source: 'skills/*', target: '.github/skills' }],
+      };
+
+      applySymlinks(entry, tmpDir);
+
+      expect(fs.existsSync(targetDir)).toBe(true);
+    });
+
+    it('creates a symlink for each matched file in the outputDir', () => {
+      const outputDir = path.join(tmpDir, 'out');
+      fs.mkdirSync(path.join(outputDir, 'skills', 'skill-a'), { recursive: true });
+      fs.mkdirSync(path.join(outputDir, 'skills', 'skill-b'), { recursive: true });
+      fs.writeFileSync(path.join(outputDir, 'skills', 'skill-a', 'README.md'), '# Skill A');
+
+      const entry: NpmdataExtractEntry = {
+        package: 'pkg',
+        outputDir: 'out',
+        symlinks: [{ source: 'skills/*', target: '.github/skills' }],
+      };
+
+      applySymlinks(entry, tmpDir);
+
+      const targetDir = path.join(tmpDir, '.github', 'skills');
+      const symlinkA = path.join(targetDir, 'skill-a');
+      const symlinkB = path.join(targetDir, 'skill-b');
+
+      expect(fs.lstatSync(symlinkA).isSymbolicLink()).toBe(true);
+      expect(fs.realpathSync(symlinkA)).toBe(
+        fs.realpathSync(path.join(outputDir, 'skills', 'skill-a')),
+      );
+      expect(fs.lstatSync(symlinkB).isSymbolicLink()).toBe(true);
+      expect(fs.realpathSync(symlinkB)).toBe(
+        fs.realpathSync(path.join(outputDir, 'skills', 'skill-b')),
+      );
+    });
+
+    it('removes stale managed symlinks that no longer match the glob', () => {
+      const outputDir = path.join(tmpDir, 'out');
+      const targetDir = path.join(tmpDir, '.github', 'skills');
+      fs.mkdirSync(path.join(outputDir, 'skills', 'skill-a'), { recursive: true });
+      fs.mkdirSync(targetDir, { recursive: true });
+
+      // Simulate a stale symlink created by a previous extraction run that pointed
+      // into outputDir but whose source no longer exists there.  The symlink is dead.
+      const staleTarget = path.join(outputDir, 'skills', 'skill-OLD');
+      fs.symlinkSync(staleTarget, path.join(targetDir, 'skill-OLD'));
+
+      const entry: NpmdataExtractEntry = {
+        package: 'pkg',
+        outputDir: 'out',
+        symlinks: [{ source: 'skills/*', target: '.github/skills' }],
+      };
+
+      applySymlinks(entry, tmpDir);
+
+      // Stale symlink must be removed; new one must be created.
+      // Use lstatSync (does NOT follow links) so a dead symlink is also detected.
+      const oldLinkGone = ((): boolean => {
+        // eslint-disable-next-line functional/no-try-statements
+        try {
+          fs.lstatSync(path.join(targetDir, 'skill-OLD'));
+          return false;
+        } catch {
+          return true;
+        }
+      })();
+      expect(oldLinkGone).toBe(true);
+      expect(fs.lstatSync(path.join(targetDir, 'skill-a')).isSymbolicLink()).toBe(true);
+    });
+
+    it('does not touch symlinks that do not point into outputDir', () => {
+      const outputDir = path.join(tmpDir, 'out');
+      const targetDir = path.join(tmpDir, '.github', 'skills');
+      const externalDir = path.join(tmpDir, 'external');
+      fs.mkdirSync(path.join(outputDir, 'skills', 'skill-a'), { recursive: true });
+      fs.mkdirSync(externalDir, { recursive: true });
+      fs.mkdirSync(targetDir, { recursive: true });
+
+      // Non-managed symlink pointing outside outputDir
+      fs.symlinkSync(externalDir, path.join(targetDir, 'external-link'));
+
+      const entry: NpmdataExtractEntry = {
+        package: 'pkg',
+        outputDir: 'out',
+        symlinks: [{ source: 'skills/*', target: '.github/skills' }],
+      };
+
+      applySymlinks(entry, tmpDir);
+
+      // External symlink must survive
+      expect(fs.lstatSync(path.join(targetDir, 'external-link')).isSymbolicLink()).toBe(true);
+    });
+
+    it('does not clobber an existing non-symlink at the target basename', () => {
+      const outputDir = path.join(tmpDir, 'out');
+      const targetDir = path.join(tmpDir, '.github', 'skills');
+      fs.mkdirSync(path.join(outputDir, 'skills', 'skill-a'), { recursive: true });
+      fs.mkdirSync(targetDir, { recursive: true });
+
+      // A regular directory exists at the target name
+      const existing = path.join(targetDir, 'skill-a');
+      fs.mkdirSync(existing, { recursive: true });
+
+      const entry: NpmdataExtractEntry = {
+        package: 'pkg',
+        outputDir: 'out',
+        symlinks: [{ source: 'skills/*', target: '.github/skills' }],
+      };
+
+      applySymlinks(entry, tmpDir);
+
+      // Must remain a regular directory, not a symlink
+      expect(fs.lstatSync(existing).isSymbolicLink()).toBe(false);
+      expect(fs.lstatSync(existing).isDirectory()).toBe(true);
+    });
+
+    it('is idempotent: running twice produces the same result', () => {
+      const outputDir = path.join(tmpDir, 'out');
+      fs.mkdirSync(path.join(outputDir, 'skills', 'skill-a'), { recursive: true });
+
+      const entry: NpmdataExtractEntry = {
+        package: 'pkg',
+        outputDir: 'out',
+        symlinks: [{ source: 'skills/*', target: '.github/skills' }],
+      };
+
+      applySymlinks(entry, tmpDir);
+      applySymlinks(entry, tmpDir);
+
+      const targetDir = path.join(tmpDir, '.github', 'skills');
+      expect(fs.lstatSync(path.join(targetDir, 'skill-a')).isSymbolicLink()).toBe(true);
+    });
+  });
+
+  // ─── applyContentReplacements ───────────────────────────────────────────────
+  describe('applyContentReplacements', () => {
+    // eslint-disable-next-line functional/no-let
+    let tmpDir: string;
+
+    beforeEach(() => {
+      // These tests need real filesystem; restore readFileSync to the actual implementation.
+      mockReadFileSync.mockImplementation(jest.requireActual<typeof fs>('node:fs').readFileSync);
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'runner-content-replace-test-'));
+    });
+
+    afterEach(() => {
+      if (fs.existsSync(tmpDir)) {
+        fs.rmSync(tmpDir, { recursive: true });
+      }
+    });
+
+    it('does nothing when entry has no contentReplacements config', () => {
+      const entry: NpmdataExtractEntry = { package: 'pkg', outputDir: './out' };
+      expect(() => applyContentReplacements(entry, tmpDir)).not.toThrow();
+    });
+
+    it('does nothing when contentReplacements array is empty', () => {
+      const entry: NpmdataExtractEntry = {
+        package: 'pkg',
+        outputDir: './out',
+        contentReplacements: [],
+      };
+      expect(() => applyContentReplacements(entry, tmpDir)).not.toThrow();
+    });
+
+    it('replaces matching content in workspace files', () => {
+      fs.mkdirSync(path.join(tmpDir, 'docs'), { recursive: true });
+      fs.writeFileSync(
+        path.join(tmpDir, 'docs', 'README.md'),
+        '# Title\n<!-- version: 0.0.0 -->\nBody',
+      );
+
+      const entry: NpmdataExtractEntry = {
+        package: 'pkg',
+        outputDir: './out',
+        contentReplacements: [
+          {
+            files: 'docs/**/*.md',
+            match: '<!-- version: .* -->',
+            replace: '<!-- version: 1.2.3 -->',
+          },
+        ],
+      };
+
+      applyContentReplacements(entry, tmpDir);
+
+      const updated = fs.readFileSync(path.join(tmpDir, 'docs', 'README.md'), 'utf8');
+      expect(updated).toContain('<!-- version: 1.2.3 -->');
+      expect(updated).not.toContain('<!-- version: 0.0.0 -->');
+    });
+
+    it('replaces all occurrences across multiple files', () => {
+      fs.writeFileSync(path.join(tmpDir, 'a.md'), 'TOKEN');
+      fs.writeFileSync(path.join(tmpDir, 'b.md'), 'TOKEN and TOKEN');
+
+      const entry: NpmdataExtractEntry = {
+        package: 'pkg',
+        outputDir: './out',
+        contentReplacements: [{ files: '*.md', match: 'TOKEN', replace: 'REPLACED' }],
+      };
+
+      applyContentReplacements(entry, tmpDir);
+
+      expect(fs.readFileSync(path.join(tmpDir, 'a.md'), 'utf8')).toBe('REPLACED');
+      expect(fs.readFileSync(path.join(tmpDir, 'b.md'), 'utf8')).toBe('REPLACED and REPLACED');
+    });
+
+    it('does not write a file when content does not change', () => {
+      const filePath = path.join(tmpDir, 'no-match.md');
+      fs.writeFileSync(filePath, 'nothing to replace here');
+      const before = fs.statSync(filePath).mtimeMs;
+
+      const entry: NpmdataExtractEntry = {
+        package: 'pkg',
+        outputDir: './out',
+        contentReplacements: [{ files: '*.md', match: 'TOKEN', replace: 'REPLACED' }],
+      };
+
+      applyContentReplacements(entry, tmpDir);
+
+      expect(fs.statSync(filePath).mtimeMs).toBe(before);
+    });
+
+    it('supports regex back-references in the replacement string', () => {
+      fs.writeFileSync(path.join(tmpDir, 'ref.md'), 'hello world');
+
+      const entry: NpmdataExtractEntry = {
+        package: 'pkg',
+        outputDir: './out',
+        contentReplacements: [{ files: '*.md', match: '(hello) (world)', replace: '$2 $1' }],
+      };
+
+      applyContentReplacements(entry, tmpDir);
+
+      expect(fs.readFileSync(path.join(tmpDir, 'ref.md'), 'utf8')).toBe('world hello');
+    });
+  });
+
+  // ─── checkContentReplacements ───────────────────────────────────────────────
+  describe('checkContentReplacements', () => {
+    // eslint-disable-next-line functional/no-let
+    let tmpDir: string;
+
+    beforeEach(() => {
+      // These tests need real filesystem; restore readFileSync to the actual implementation.
+      mockReadFileSync.mockImplementation(jest.requireActual<typeof fs>('node:fs').readFileSync);
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'runner-check-replace-test-'));
+    });
+
+    afterEach(() => {
+      if (fs.existsSync(tmpDir)) {
+        fs.rmSync(tmpDir, { recursive: true });
+      }
+    });
+
+    it('returns an empty array when no contentReplacements are defined', () => {
+      const entry: NpmdataExtractEntry = { package: 'pkg', outputDir: './out' };
+      expect(checkContentReplacements(entry, tmpDir)).toEqual([]);
+    });
+
+    it('returns an empty array when all replacements are already applied', () => {
+      fs.writeFileSync(path.join(tmpDir, 'doc.md'), '<!-- version: 1.2.3 -->');
+
+      const entry: NpmdataExtractEntry = {
+        package: 'pkg',
+        outputDir: './out',
+        contentReplacements: [
+          { files: '*.md', match: '<!-- version: .* -->', replace: '<!-- version: 1.2.3 -->' },
+        ],
+      };
+
+      // No further changes needed – regex matches but replacement string equals its own output.
+      // Build a case where the replacement produces no diff.
+      // We write the file already containing the replacement text, so match succeeds but diff is zero.
+      expect(checkContentReplacements(entry, tmpDir)).toEqual([]);
+    });
+
+    it('returns paths of files where the replacement would still change content', () => {
+      const filePath = path.join(tmpDir, 'doc.md');
+      fs.writeFileSync(filePath, '<!-- version: 0.0.0 -->');
+
+      const entry: NpmdataExtractEntry = {
+        package: 'pkg',
+        outputDir: './out',
+        contentReplacements: [
+          { files: '*.md', match: '<!-- version: 0.0.0 -->', replace: '<!-- version: 1.0.0 -->' },
+        ],
+      };
+
+      const outOfSync = checkContentReplacements(entry, tmpDir);
+      expect(outOfSync).toContain(filePath);
+    });
+
+    it('does not return a path when the file content would not change', () => {
+      const filePath = path.join(tmpDir, 'up-to-date.md');
+      fs.writeFileSync(filePath, 'no marker here');
+
+      const entry: NpmdataExtractEntry = {
+        package: 'pkg',
+        outputDir: './out',
+        contentReplacements: [{ files: '*.md', match: 'MARKER', replace: 'REPLACED' }],
+      };
+
+      const outOfSync = checkContentReplacements(entry, tmpDir);
+      expect(outOfSync).not.toContain(filePath);
     });
   });
 });

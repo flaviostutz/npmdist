@@ -46,6 +46,14 @@ export function calculateFileHash(filePath: string): string {
 }
 
 /**
+ * Compute the SHA-256 hash of an in-memory buffer or string.
+ * Used to hash content that has been transformed in memory before writing to disk.
+ */
+export function calculateBufferHash(content: Buffer | string): string {
+  return crypto.createHash('sha256').update(content).digest('hex');
+}
+
+/**
  * Check if file contents match regex patterns.
  * Binary files (detected via null-byte scan) are always excluded when patterns are set.
  */

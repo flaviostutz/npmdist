@@ -16,12 +16,14 @@ import {
   ManagedFileMetadata,
   ProgressEvent,
   DEFAULT_FILENAME_PATTERNS,
+  ContentReplacementConfig,
 } from './types';
 import {
   ensureDir,
   removeFile,
   copyFile,
   calculateFileHash,
+  calculateBufferHash,
   matchesFilenamePattern,
   matchesContentRegex,
   detectPackageManager,
@@ -415,6 +417,13 @@ async function extractFiles(
       continue;
     }
 
+    // In keep-existing mode, skip files that already exist on disk but create missing ones normally.
+    if (config.keepExisting && fs.existsSync(destPath)) {
+      changes.skipped.push(packageFile.relPath);
+      emit?.({ type: 'file-skipped', packageName, file: packageFile.relPath });
+      continue;
+    }
+
     if (fs.existsSync(destPath)) {
       if (existingOwner?.packageName === packageName) {
         if (calculateFileHash(packageFile.fullPath) === calculateFileHash(destPath)) {
@@ -562,6 +571,10 @@ export async function extract(config: ConsumerConfig): Promise<ConsumerResult> {
   const dryRun = config.dryRun ?? false;
   if (!dryRun) ensureDir(config.outputDir);
 
+  if (config.force && config.keepExisting) {
+    throw new Error('force and keepExisting cannot be used together');
+  }
+
   const packageManager = config.packageManager ?? detectPackageManager(config.cwd);
   const sourcePackages: ConsumerResult['sourcePackages'] = [];
   const totalChanges: Pick<ConsumerResult, 'added' | 'modified' | 'deleted' | 'skipped'> = {
@@ -619,6 +632,47 @@ export async function extract(config: ConsumerConfig): Promise<ConsumerResult> {
 }
 
 /**
+ * Compute the expected hash of a package source file as it should appear in the
+ * output directory after all content replacements have been applied.
+ *
+ * When no replacement config is provided (or none matches the file), the hash is
+ * computed directly from the on-disk source content.  When one or more replacements
+ * match, the source content is transformed in memory and the resulting hash is
+ * returned – this makes check() tolerant of post-extract content replacements.
+ */
+// eslint-disable-next-line complexity
+function computeExpectedHash(
+  sourceFullPath: string,
+  relPath: string,
+  outputDir: string,
+  cwd: string,
+  replacements?: ContentReplacementConfig[],
+): string {
+  if (!replacements || replacements.length === 0) {
+    return calculateFileHash(sourceFullPath);
+  }
+
+  // The workspace path of the extracted file, relative to cwd, is used to
+  // evaluate the replacement's `files` glob (which is also relative to cwd).
+  const workspaceRelPath = path.relative(cwd, path.join(outputDir, relPath));
+
+  const applicable = replacements.filter((r) =>
+    matchesFilenamePattern(workspaceRelPath, [r.files]),
+  );
+
+  if (applicable.length === 0) {
+    return calculateFileHash(sourceFullPath);
+  }
+
+  // eslint-disable-next-line functional/no-let
+  let content = fs.readFileSync(sourceFullPath, 'utf8');
+  for (const r of applicable) {
+    content = content.replaceAll(new RegExp(r.match, 'gm'), r.replace);
+  }
+  return calculateBufferHash(content);
+}
+
+/**
  * Check if managed files are in sync with published packages.
  *
  * Performs a bidirectional comparison:
@@ -658,7 +712,10 @@ export async function check(config: ConsumerConfig): Promise<CheckResult> {
       );
     const markerPaths = new Set(markerFiles.map((m) => m.path));
 
-    // Build a hash map of the installed package files (filtered the same way)
+    // Build a hash map of the installed package files (filtered the same way).
+    // When content replacements are configured, the expected hash for each affected file
+    // is computed from the source content AFTER applying the replacements, so that files
+    // modified in-place by a post-extract replacement are not reported as out of sync.
     // eslint-disable-next-line no-await-in-loop
     const packageFiles = await getPackageFiles(name, config.cwd);
     const filteredPackageFiles = packageFiles.filter(
@@ -666,8 +723,18 @@ export async function check(config: ConsumerConfig): Promise<CheckResult> {
         matchesFilenamePattern(f.relPath, config.filenamePatterns ?? DEFAULT_FILENAME_PATTERNS) &&
         matchesContentRegex(f.fullPath, config.contentRegexes),
     );
+    const effectiveCwd = config.cwd ?? process.cwd();
     const packageHashMap = new Map(
-      filteredPackageFiles.map((f) => [f.relPath, calculateFileHash(f.fullPath)]),
+      filteredPackageFiles.map((f) => [
+        f.relPath,
+        computeExpectedHash(
+          f.fullPath,
+          f.relPath,
+          config.outputDir,
+          effectiveCwd,
+          config.contentReplacements,
+        ),
+      ]),
     );
 
     const pkgDiff: CheckResult['sourcePackages'][number]['differences'] = {

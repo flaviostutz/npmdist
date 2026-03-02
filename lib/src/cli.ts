@@ -217,6 +217,7 @@ export async function cli(processArgs: string[]): Promise<number> {
   // Parse options common to extract and check
   let packageSpecs: string | undefined;
   let force = false;
+  let keepExisting = false;
   let gitignore = true;
   let dryRun = false;
   let upgrade = false;
@@ -232,6 +233,8 @@ export async function cli(processArgs: string[]): Promise<number> {
       packageSpecs = args[++i];
     } else if (args[i] === '--force') {
       force = true;
+    } else if (args[i] === '--keep-existing') {
+      keepExisting = true;
     } else if (args[i] === '--silent') {
       silent = true;
     } else if (args[i] === '--no-gitignore') {
@@ -265,6 +268,11 @@ export async function cli(processArgs: string[]): Promise<number> {
     console.info(`No --output specified. Using current directory: ${outDir}`);
   }
 
+  if (force && keepExisting) {
+    console.error('Error: --force and --keep-existing cannot be used together');
+    return 1;
+  }
+
   const packages = packageSpecs.split(',').map((s) => s.trim());
 
   // Build onProgress handler that prints file-level events grouped by package
@@ -294,6 +302,7 @@ export async function cli(processArgs: string[]): Promise<number> {
     packages,
     outputDir: path.resolve(outDir),
     force,
+    keepExisting,
     gitignore,
     dryRun,
     upgrade,
@@ -385,6 +394,8 @@ Extract / Check Options:
                                e.g. "my-pkg@^1.2.3,other-pkg@2.x"
   --output, -o <dir>           Output directory (default: current directory, with a warning)
   --force                      Allow overwriting existing unmanaged files
+  --keep-existing              Skip files that already exist in the output directory;
+                               create them when absent. Cannot be combined with --force
   --no-gitignore               Skip creating/updating .gitignore (gitignore is enabled by default)
   --unmanaged                  Write files without a .npmdata marker, .gitignore update, or
                                read-only flag. Existing files are skipped. Files can be freely

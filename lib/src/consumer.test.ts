@@ -349,6 +349,80 @@ describe('Consumer', () => {
       ).toBe(true);
     });
 
+    it('should create missing files when keepExisting is true', async () => {
+      const outputDir = path.join(tmpDir, 'output');
+
+      await installMockPackage(
+        'test-keep-existing-new-package',
+        { 'new-file.md': '# From package' },
+        tmpDir,
+      );
+
+      const result = await extract({
+        packages: ['test-keep-existing-new-package'],
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+        keepExisting: true,
+        filenamePatterns: ['**'],
+      });
+
+      // Missing file should be created
+      expect(fs.existsSync(path.join(outputDir, 'new-file.md'))).toBe(true);
+      expect(fs.readFileSync(path.join(outputDir, 'new-file.md'), 'utf8')).toBe('# From package');
+      expect(result.added).toContain('new-file.md');
+    });
+
+    it('should skip existing files when keepExisting is true without overwriting', async () => {
+      const outputDir = path.join(tmpDir, 'output');
+      fs.mkdirSync(outputDir, { recursive: true });
+
+      const userContent = 'user-modified content';
+      fs.writeFileSync(path.join(outputDir, 'existing.md'), userContent);
+
+      await installMockPackage(
+        'test-keep-existing-skip-package',
+        { 'existing.md': '# From package' },
+        tmpDir,
+      );
+
+      const result = await extract({
+        packages: ['test-keep-existing-skip-package'],
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+        keepExisting: true,
+        filenamePatterns: ['**'],
+      });
+
+      // Existing file must NOT be overwritten
+      expect(fs.readFileSync(path.join(outputDir, 'existing.md'), 'utf8')).toBe(userContent);
+      expect(result.skipped).toContain('existing.md');
+      expect(result.modified).not.toContain('existing.md');
+      expect(result.added).not.toContain('existing.md');
+    });
+
+    it('should throw when force and keepExisting are both true', async () => {
+      const outputDir = path.join(tmpDir, 'output');
+
+      await installMockPackage(
+        'test-force-keep-conflict-package',
+        { 'file.md': '# content' },
+        tmpDir,
+      );
+
+      await expect(
+        extract({
+          packages: ['test-force-keep-conflict-package'],
+          outputDir,
+          packageManager: 'pnpm',
+          cwd: tmpDir,
+          force: true,
+          keepExisting: true,
+        }),
+      ).rejects.toThrow('force and keepExisting cannot be used together');
+    });
+
     it('should filter files by filenamePatterns', async () => {
       const outputDir = path.join(tmpDir, 'output');
 
@@ -1355,6 +1429,90 @@ describe('Consumer', () => {
           cwd: tmpDir,
         }),
       ).rejects.toThrow(/does not satisfy constraint/);
+    });
+
+    it('should report in sync when contentReplacements are applied to extracted files', async () => {
+      const outputDir = path.join(tmpDir, 'output');
+
+      await installMockPackage(
+        'test-check-replacement-sync',
+        { 'docs/guide.md': '# Guide\n<!-- version: 0.0.0 -->\n' },
+        tmpDir,
+      );
+
+      await extract({
+        packages: ['test-check-replacement-sync'],
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+        filenamePatterns: ['**'],
+      });
+
+      // Simulate the post-extract content replacement modifying the file in-place
+      const extractedFile = path.join(outputDir, 'docs', 'guide.md');
+      fs.chmodSync(extractedFile, 0o644);
+      fs.writeFileSync(extractedFile, '# Guide\n<!-- version: 1.2.3 -->\n', 'utf8');
+      fs.chmodSync(extractedFile, 0o444);
+
+      const replacement = {
+        files: `${path.relative(tmpDir, outputDir)}/**/*.md`,
+        match: '<!-- version: .* -->',
+        replace: '<!-- version: 1.2.3 -->',
+      };
+
+      // check() without replacements should report the file as modified
+      const resultWithout = await check({
+        packages: ['test-check-replacement-sync'],
+        outputDir,
+        cwd: tmpDir,
+      });
+      expect(resultWithout.ok).toBe(false);
+      expect(resultWithout.differences.modified.some((f) => f.includes('guide.md'))).toBe(true);
+
+      // check() WITH the replacement config should report in sync
+      const resultWith = await check({
+        packages: ['test-check-replacement-sync'],
+        outputDir,
+        cwd: tmpDir,
+        contentReplacements: [replacement],
+      });
+      expect(resultWith.ok).toBe(true);
+      expect(resultWith.differences.modified).toHaveLength(0);
+    });
+
+    it('should still detect genuinely modified files when contentReplacements are provided', async () => {
+      const outputDir = path.join(tmpDir, 'output');
+
+      await installMockPackage(
+        'test-check-replacement-still-modified',
+        { 'config.json': '{"key":"original"}' },
+        tmpDir,
+      );
+
+      await extract({
+        packages: ['test-check-replacement-still-modified'],
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+        filenamePatterns: ['**'],
+      });
+
+      // User modified the file manually (not via a declared replacement)
+      const extractedFile = path.join(outputDir, 'config.json');
+      fs.chmodSync(extractedFile, 0o644);
+      fs.writeFileSync(extractedFile, '{"key":"tampered"}', 'utf8');
+      fs.chmodSync(extractedFile, 0o444);
+
+      // Providing a replacement for a different file pattern should not mask the real change
+      const result = await check({
+        packages: ['test-check-replacement-still-modified'],
+        outputDir,
+        cwd: tmpDir,
+        contentReplacements: [{ files: '**/*.md', match: 'anything', replace: 'anything' }],
+      });
+
+      expect(result.ok).toBe(false);
+      expect(result.differences.modified.some((f) => f.includes('config.json'))).toBe(true);
     });
   });
 

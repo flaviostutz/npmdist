@@ -11,6 +11,56 @@ export const DEFAULT_FILENAME_PATTERNS = [
 ];
 
 /**
+ * Configuration for a post-extract symlink operation.
+ * After files are extracted, matching files/dirs in the output directory are made
+ * available as symlinks inside the target directory.
+ */
+export type SymlinkConfig = {
+  /**
+   * Glob pattern relative to the extraction outputDir. Every file or directory
+   * whose relative path matches this pattern will be represented by a symlink in
+   * the target directory.
+   * Example: "**\/skills\/**" will find every entry under any "skills" directory.
+   */
+  source: string;
+
+  /**
+   * Directory where the symlinks will be created, relative to the working
+   * directory in which the runner is invoked (i.e. the consumer's project root).
+   * Example: ".github/skills"
+   */
+  target: string;
+};
+
+/**
+ * Configuration for a post-extract content-replacement operation.
+ * After files are extracted, the specified files in the workspace are searched
+ * for regex matches and the matched portions are replaced with the target string.
+ */
+export type ContentReplacementConfig = {
+  /**
+   * Glob pattern (relative to the working directory) selecting workspace files
+   * whose content should be modified.
+   * Example: "docs/**\/*.md"
+   */
+  files: string;
+
+  /**
+   * Regular-expression string used to locate the text to replace inside each
+   * matched file.  All non-overlapping occurrences are replaced (global flag is
+   * applied automatically).
+   * Example: "<!-- version: .* -->"
+   */
+  match: string;
+
+  /**
+   * Replacement string (may contain regex back-references such as "$1").
+   * Example: "<!-- version: 1.2.3 -->"
+   */
+  replace: string;
+};
+
+/**
  * Configuration for filtering which files to include/exclude
  */
 export type FileFilterConfig = {
@@ -63,6 +113,12 @@ export type ConsumerConfig = FileFilterConfig & {
   force?: boolean;
 
   /**
+   * When true, skip files that already exist in the output directory but create
+   * them when they are absent.  Cannot be combined with force.
+   */
+  keepExisting?: boolean;
+
+  /**
    * Working directory from which to run package manager install commands (e.g. pnpm add).
    * Defaults to process.cwd() if not specified.
    */
@@ -101,6 +157,14 @@ export type ConsumerConfig = FileFilterConfig & {
    * Useful for progress reporting in scripts and build tools.
    */
   onProgress?: (event: ProgressEvent) => void;
+
+  /**
+   * Content-replacement operations that were applied to files after extraction.
+   * When provided, check() will apply the same transformations to the package
+   * source content before comparing hashes, so files modified by replacements
+   * are not incorrectly reported as out of sync.
+   */
+  contentReplacements?: ContentReplacementConfig[];
 };
 
 /**
@@ -221,6 +285,12 @@ export type NpmdataExtractEntry = {
   force?: boolean;
 
   /**
+   * When true, skip files that already exist in the output directory but create
+   * them when they are absent.  Cannot be combined with force (default: false).
+   */
+  keepExisting?: boolean;
+
+  /**
    * Create/update a .gitignore file alongside each .npmdata marker file (default: false).
    */
   gitignore?: boolean;
@@ -259,6 +329,21 @@ export type NpmdataExtractEntry = {
    * processed. Entries with no tags are always skipped when a tag filter is active.
    */
   tags?: string[];
+
+  /**
+   * Post-extract symlink operations. After extraction, for each config the runner
+   * resolves all files/directories inside outputDir that match the source glob and
+   * creates a corresponding symlink inside the target directory. Stale symlinks
+   * (pointing into outputDir but no longer matched) are removed automatically.
+   */
+  symlinks?: SymlinkConfig[];
+
+  /**
+   * Post-extract content-replacement operations. After extraction, for each config
+   * the runner finds workspace files matching the files glob and applies the regex
+   * replacement to their contents.
+   */
+  contentReplacements?: ContentReplacementConfig[];
 };
 
 /**
