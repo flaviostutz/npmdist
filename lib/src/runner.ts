@@ -45,6 +45,30 @@ function buildExtractCommand(
 }
 
 /**
+ * Build a CLI command string that checks whether local files are in sync with the entry's package.
+ */
+export function buildCheckCommand(
+  cliPath: string,
+  entry: NpmdataExtractEntry,
+  cwd: string = process.cwd(),
+): string {
+  const outputFlag = ` --output "${path.resolve(cwd, entry.outputDir)}"`;
+  return `node "${cliPath}" check --packages "${entry.package}"${outputFlag}`;
+}
+
+/**
+ * Build a CLI command string that lists all managed files in the given output directory.
+ */
+export function buildListCommand(
+  cliPath: string,
+  outputDir: string,
+  cwd: string = process.cwd(),
+): string {
+  const resolvedOutput = path.resolve(cwd, outputDir);
+  return `node "${cliPath}" list --output "${resolvedOutput}"`;
+}
+
+/**
  * Build a CLI command string that purges (removes) all managed files for the entry's package
  * from its output directory. No package installation is required.
  */
@@ -89,11 +113,15 @@ export function printHelp(packageName: string, availableTags: string[]): void {
       '',
       'Actions:',
       '  extract  Extract files from the source package(s) defined in package.json',
+      '  check    Verify local files are in sync with the source package(s)',
+      '  list     List all files managed by npmdata in the output directories',
+      '  purge    Remove all managed files previously extracted',
       '',
       'Options:',
       '  --help              Show this help message',
       '  --output, -o <dir>  Base directory for resolving all outputDir paths (default: cwd)',
-      '  --tags <tag1,tag2>  Limit extraction to entries whose tags overlap (comma-separated)',
+      '  --dry-run           Simulate changes without writing or deleting any files',
+      '  --tags <tag1,tag2>  Limit to entries whose tags overlap (comma-separated)',
       '',
       `Available tags: ${tagsLine}`,
       '',
@@ -104,11 +132,20 @@ export function printHelp(packageName: string, availableTags: string[]): void {
       `  ${packageName} extract --output <dir>`,
       '    Extract files, resolving all outputDir paths relative to <dir> instead of cwd',
       '',
+      `  ${packageName} extract --dry-run`,
+      '    Preview what would be extracted without writing any files',
+      '',
       `  ${packageName} extract --tags ${exampleTag}`,
       `    Extract files only for entries tagged "${exampleTag}"`,
       '',
-      `  ${packageName} extract --output <dir> --tags ${exampleTag}`,
-      `    Combine --output and --tags`,
+      `  ${packageName} check`,
+      '    Check if local files are in sync with the source packages',
+      '',
+      `  ${packageName} list`,
+      '    List all files managed by npmdata in the output directories',
+      '',
+      `  ${packageName} purge`,
+      '    Remove all managed files from the output directories',
       '',
     ].join('\n'),
   );
@@ -125,6 +162,20 @@ export function parseOutputFromArgv(argv: string[]): string | undefined {
     return undefined;
   }
   return argv[idx + 1];
+}
+
+/**
+ * Returns true when --dry-run appears in the argv array.
+ */
+export function parseDryRunFromArgv(argv: string[]): boolean {
+  return argv.includes('--dry-run');
+}
+
+/**
+ * Returns true when --silent appears in the argv array.
+ */
+export function parseSilentFromArgv(argv: string[]): boolean {
+  return argv.includes('--silent');
 }
 
 /**
@@ -408,12 +459,88 @@ export function checkContentReplacements(
   return outOfSync;
 }
 
+// ─── Action handlers ───────────────────────────────────────────────────────────
+
+function runExtract(
+  entries: NpmdataExtractEntry[],
+  excludedEntries: NpmdataExtractEntry[],
+  cliPath: string,
+  runCwd: string,
+  dryRunFromArgv: boolean,
+  silentFromArgv: boolean,
+): void {
+  for (const entry of entries) {
+    const effectiveEntry: NpmdataExtractEntry = {
+      ...entry,
+      dryRun: entry.dryRun || dryRunFromArgv,
+      silent: entry.silent || silentFromArgv,
+    };
+    fs.mkdirSync(path.resolve(runCwd, entry.outputDir), { recursive: true });
+    const command = buildExtractCommand(cliPath, effectiveEntry, runCwd);
+    execSync(command, { stdio: 'inherit', cwd: runCwd });
+    if (!effectiveEntry.dryRun) {
+      applySymlinks(entry, runCwd);
+      applyContentReplacements(entry, runCwd);
+    }
+  }
+
+  // When a tag filter is active, purge managed files from excluded entries so that
+  // the output directory contains only files from the currently active tag group.
+  for (const entry of excludedEntries) {
+    const effectiveEntry: NpmdataExtractEntry = {
+      ...entry,
+      dryRun: entry.dryRun || dryRunFromArgv,
+      silent: entry.silent || silentFromArgv,
+    };
+    const command = buildPurgeCommand(cliPath, effectiveEntry, runCwd);
+    execSync(command, { stdio: 'inherit', cwd: runCwd });
+  }
+}
+
+function runCheck(entries: NpmdataExtractEntry[], cliPath: string, runCwd: string): void {
+  for (const entry of entries) {
+    const command = buildCheckCommand(cliPath, entry, runCwd);
+    execSync(command, { stdio: 'inherit', cwd: runCwd });
+  }
+}
+
+function runList(allEntries: NpmdataExtractEntry[], cliPath: string, runCwd: string): void {
+  // Collect unique resolved output dirs (tag filter not applied; list is informational).
+  const seenDirs = new Set<string>();
+  for (const entry of allEntries) {
+    const resolvedDir = path.resolve(runCwd, entry.outputDir);
+    if (!seenDirs.has(resolvedDir)) {
+      seenDirs.add(resolvedDir);
+      const command = buildListCommand(cliPath, entry.outputDir, runCwd);
+      execSync(command, { stdio: 'inherit', cwd: runCwd });
+    }
+  }
+}
+
+function runPurge(
+  entries: NpmdataExtractEntry[],
+  cliPath: string,
+  runCwd: string,
+  dryRunFromArgv: boolean,
+  silentFromArgv: boolean,
+): void {
+  for (const entry of entries) {
+    const effectiveEntry: NpmdataExtractEntry = {
+      ...entry,
+      dryRun: entry.dryRun || dryRunFromArgv,
+      silent: entry.silent || silentFromArgv,
+    };
+    const command = buildPurgeCommand(cliPath, effectiveEntry, runCwd);
+    execSync(command, { stdio: 'inherit', cwd: runCwd });
+  }
+}
+
 /**
  * Runs extraction for each entry defined in the publishable package's package.json "npmdata" array.
  * Invokes the npmdata CLI once per entry so that all CLI output and error handling is preserved.
  * Called from the minimal generated bin script with its own __dirname as binDir.
  *
- * Pass --tags <tag1,tag2> to limit extraction to entries whose tags overlap with the given list.
+ * Pass --tags <tag1,tag2> to limit processing to entries whose tags overlap with the given list.
  */
 export function run(binDir: string, argv: string[] = process.argv): void {
   const pkgJsonPath = path.join(binDir, '../package.json');
@@ -431,8 +558,10 @@ export function run(binDir: string, argv: string[] = process.argv): void {
 
   const action = userArgs[0];
 
-  if (action !== 'extract') {
-    process.stderr.write(`Error: unknown action '${action}'. Use 'extract'.\n\n`);
+  if (!['extract', 'check', 'list', 'purge'].includes(action)) {
+    process.stderr.write(
+      `Error: unknown action '${action}'. Use 'extract', 'check', 'list', or 'purge'.\n\n`,
+    );
     printHelp(pkg.name, collectAllTags(allEntries));
     return;
   }
@@ -445,19 +574,16 @@ export function run(binDir: string, argv: string[] = process.argv): void {
   const cliPath = require.resolve('npmdata/dist/main.js', { paths: [binDir] });
   const parsedOutput = parseOutputFromArgv(userArgs);
   const runCwd = parsedOutput ? path.resolve(process.cwd(), parsedOutput) : process.cwd();
+  const dryRunFromArgv = parseDryRunFromArgv(userArgs);
+  const silentFromArgv = parseSilentFromArgv(userArgs);
 
-  for (const entry of entries) {
-    fs.mkdirSync(path.resolve(runCwd, entry.outputDir), { recursive: true });
-    const command = buildExtractCommand(cliPath, entry, runCwd);
-    execSync(command, { stdio: 'inherit', cwd: runCwd });
-    applySymlinks(entry, runCwd);
-    applyContentReplacements(entry, runCwd);
-  }
-
-  // When a tag filter is active, purge managed files from excluded entries so that
-  // the output directory contains only files from the currently active tag group.
-  for (const entry of excludedEntries) {
-    const command = buildPurgeCommand(cliPath, entry, runCwd);
-    execSync(command, { stdio: 'inherit', cwd: runCwd });
+  if (action === 'extract') {
+    runExtract(entries, excludedEntries, cliPath, runCwd, dryRunFromArgv, silentFromArgv);
+  } else if (action === 'check') {
+    runCheck(entries, cliPath, runCwd);
+  } else if (action === 'list') {
+    runList(allEntries, cliPath, runCwd);
+  } else if (action === 'purge') {
+    runPurge(entries, cliPath, runCwd, dryRunFromArgv, silentFromArgv);
   }
 }

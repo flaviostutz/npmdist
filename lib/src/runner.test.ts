@@ -7,9 +7,13 @@ import {
   run,
   parseTagsFromArgv,
   parseOutputFromArgv,
+  parseDryRunFromArgv,
+  parseSilentFromArgv,
   filterEntriesByTags,
   collectAllTags,
   printHelp,
+  buildCheckCommand,
+  buildListCommand,
   buildPurgeCommand,
   applySymlinks,
   applyContentReplacements,
@@ -749,6 +753,400 @@ describe('runner', () => {
 
       const cmds = capturedCommands();
       expect(cmds.every((c) => c.includes('purge'))).toBe(true);
+    });
+  });
+
+  describe('parseDryRunFromArgv', () => {
+    it('returns false when --dry-run is not present', () => {
+      expect(parseDryRunFromArgv(['node', 'script.js', 'extract'])).toBe(false);
+    });
+
+    it('returns true when --dry-run is present', () => {
+      expect(parseDryRunFromArgv(['node', 'script.js', 'extract', '--dry-run'])).toBe(true);
+    });
+
+    it('returns false for an empty array', () => {
+      expect(parseDryRunFromArgv([])).toBe(false);
+    });
+
+    it('returns false when only similar-but-different flags are present', () => {
+      expect(parseDryRunFromArgv(['node', 'script.js', '--no-gitignore'])).toBe(false);
+    });
+  });
+
+  describe('parseSilentFromArgv', () => {
+    it('returns false when --silent is not present', () => {
+      expect(parseSilentFromArgv(['node', 'script.js', 'extract'])).toBe(false);
+    });
+
+    it('returns true when --silent is present', () => {
+      expect(parseSilentFromArgv(['node', 'script.js', 'extract', '--silent'])).toBe(true);
+    });
+
+    it('returns false for an empty array', () => {
+      expect(parseSilentFromArgv([])).toBe(false);
+    });
+  });
+
+  describe('buildCheckCommand', () => {
+    const CLI_PATH = '/path/to/main.js';
+    const CHECK_CWD = '/my/project';
+
+    it('builds a check command with package and resolved output dir', () => {
+      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: './out' };
+      const cmd = buildCheckCommand(CLI_PATH, entry, CHECK_CWD);
+      expect(cmd).toContain('check');
+      expect(cmd).toContain('--packages "my-pkg"');
+      expect(cmd).toContain('--output "/my/project/out"');
+    });
+
+    it('resolves a relative outputDir to an absolute path', () => {
+      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: 'data' };
+      const cmd = buildCheckCommand(CLI_PATH, entry, '/project/root');
+      expect(cmd).toContain('--output "/project/root/data"');
+    });
+
+    it('resolves dot outputDir to the cwd itself', () => {
+      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: '.' };
+      const cmd = buildCheckCommand(CLI_PATH, entry, '/project/root');
+      expect(cmd).toContain('--output "/project/root"');
+    });
+
+    it('preserves a version specifier in the package name', () => {
+      const entry: NpmdataExtractEntry = { package: 'my-pkg@^2.0.0', outputDir: '.' };
+      const cmd = buildCheckCommand(CLI_PATH, entry, CHECK_CWD);
+      expect(cmd).toContain('--packages "my-pkg@^2.0.0"');
+    });
+
+    it('uses node and the provided CLI path', () => {
+      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: '.' };
+      const cmd = buildCheckCommand(CLI_PATH, entry, CHECK_CWD);
+      expect(cmd).toMatch(/node ".+main\.js"/);
+    });
+
+    it('uses process.cwd() as default cwd when none is provided', () => {
+      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: 'out' };
+      const cmd = buildCheckCommand(CLI_PATH, entry);
+      expect(cmd).toContain(`--output "${path.resolve(process.cwd(), 'out')}"`);
+    });
+  });
+
+  describe('buildListCommand', () => {
+    const CLI_PATH = '/path/to/main.js';
+    const LIST_CWD = '/my/project';
+
+    it('builds a list command with the resolved output dir', () => {
+      const cmd = buildListCommand(CLI_PATH, './out', LIST_CWD);
+      expect(cmd).toContain('list');
+      expect(cmd).toContain('--output "/my/project/out"');
+    });
+
+    it('resolves a relative outputDir to an absolute path', () => {
+      const cmd = buildListCommand(CLI_PATH, 'data', '/project/root');
+      expect(cmd).toContain('--output "/project/root/data"');
+    });
+
+    it('resolves dot outputDir to the cwd itself', () => {
+      const cmd = buildListCommand(CLI_PATH, '.', '/project/root');
+      expect(cmd).toContain('--output "/project/root"');
+    });
+
+    it('uses node and the provided CLI path', () => {
+      const cmd = buildListCommand(CLI_PATH, '.', LIST_CWD);
+      expect(cmd).toMatch(/node ".+main\.js"/);
+    });
+
+    it('uses process.cwd() as default cwd when none is provided', () => {
+      const cmd = buildListCommand(CLI_PATH, 'out');
+      expect(cmd).toContain(`--output "${path.resolve(process.cwd(), 'out')}"`);
+    });
+
+    it('does not include --packages in the command', () => {
+      const cmd = buildListCommand(CLI_PATH, '.', LIST_CWD);
+      expect(cmd).not.toContain('--packages');
+    });
+  });
+
+  describe('run – check action', () => {
+    it('runs a check command for each entry', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [
+          { package: 'pkg-a', outputDir: './a' },
+          { package: 'pkg-b', outputDir: './b' },
+        ],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'check']);
+
+      expect(mockExecSync).toHaveBeenCalledTimes(2);
+      const cmds = capturedCommands();
+      expect(cmds.every((c) => c.includes('check'))).toBe(true);
+    });
+
+    it('passes correct package and output dir in the check command', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [{ package: 'pkg-a@^1.0.0', outputDir: './data' }],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'check']);
+
+      const cmd = capturedCommand();
+      expect(cmd).toContain('check');
+      expect(cmd).toContain('--packages "pkg-a@^1.0.0"');
+      expect(cmd).toContain(`--output "${path.resolve('./data')}"`);
+    });
+
+    it('respects --tags when running check', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [
+          { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
+          { package: 'pkg-b', outputDir: './b', tags: ['staging'] },
+        ],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'check', '--tags', 'prod']);
+
+      expect(mockExecSync).toHaveBeenCalledTimes(1);
+      expect(capturedCommand()).toContain('pkg-a');
+    });
+
+    it('uses --output as base dir for resolving outputDir in check', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [{ package: 'my-pkg', outputDir: 'data' }],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'check', '--output', '/custom/base']);
+
+      expect(capturedCommand()).toContain(`--output "${path.resolve('/custom/base', 'data')}"`);
+    });
+
+    it('uses default entry when npmdata is absent', () => {
+      setupPackageJson({ name: 'my-pkg' });
+
+      run(BIN_DIR, ['node', 'script.js', 'check']);
+
+      expect(mockExecSync).toHaveBeenCalledTimes(1);
+      expect(capturedCommand()).toContain('--packages "my-pkg"');
+    });
+  });
+
+  describe('run – list action', () => {
+    it('runs a list command for each unique outputDir', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [
+          { package: 'pkg-a', outputDir: './a' },
+          { package: 'pkg-b', outputDir: './b' },
+        ],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'list']);
+
+      expect(mockExecSync).toHaveBeenCalledTimes(2);
+      const cmds = capturedCommands();
+      expect(cmds.every((c) => c.includes('list'))).toBe(true);
+    });
+
+    it('runs only one list command when multiple entries share the same outputDir', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [
+          { package: 'pkg-a', outputDir: './data' },
+          { package: 'pkg-b', outputDir: './data' },
+        ],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'list']);
+
+      expect(mockExecSync).toHaveBeenCalledTimes(1);
+    });
+
+    it('passes the resolved output dir in the list command', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [{ package: 'pkg-a', outputDir: './data' }],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'list']);
+
+      expect(capturedCommand()).toContain(`--output "${path.resolve('./data')}"`);
+    });
+
+    it('uses --output as base dir for resolving outputDir in list', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [{ package: 'my-pkg', outputDir: 'data' }],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'list', '--output', '/custom/base']);
+
+      expect(capturedCommand()).toContain(`--output "${path.resolve('/custom/base', 'data')}"`);
+    });
+
+    it('lists all entries regardless of tag filter', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [
+          { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
+          { package: 'pkg-b', outputDir: './b', tags: ['staging'] },
+        ],
+      });
+
+      // Even with --tags, list should show all output dirs
+      run(BIN_DIR, ['node', 'script.js', 'list', '--tags', 'prod']);
+
+      expect(mockExecSync).toHaveBeenCalledTimes(2);
+    });
+
+    it('uses default entry when npmdata is absent', () => {
+      setupPackageJson({ name: 'my-pkg' });
+
+      run(BIN_DIR, ['node', 'script.js', 'list']);
+
+      expect(mockExecSync).toHaveBeenCalledTimes(1);
+      expect(capturedCommand()).toContain('list');
+    });
+  });
+
+  describe('run – purge action', () => {
+    it('runs a purge command for each entry', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [
+          { package: 'pkg-a', outputDir: './a' },
+          { package: 'pkg-b', outputDir: './b' },
+        ],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'purge']);
+
+      expect(mockExecSync).toHaveBeenCalledTimes(2);
+      const cmds = capturedCommands();
+      expect(cmds.every((c) => c.includes('purge'))).toBe(true);
+    });
+
+    it('respects --tags when running purge', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [
+          { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
+          { package: 'pkg-b', outputDir: './b', tags: ['staging'] },
+        ],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'purge', '--tags', 'prod']);
+
+      expect(mockExecSync).toHaveBeenCalledTimes(1);
+      expect(capturedCommand()).toContain('pkg-a');
+    });
+
+    it('overlays --dry-run from argv onto the purge command', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [{ package: 'my-pkg', outputDir: '.' }],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'purge', '--dry-run']);
+
+      expect(capturedCommand()).toContain('--dry-run');
+    });
+
+    it('overlays --silent from argv onto the purge command', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [{ package: 'my-pkg', outputDir: '.' }],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'purge', '--silent']);
+
+      expect(capturedCommand()).toContain('--silent');
+    });
+
+    it('uses --output as base dir for resolving outputDir in purge', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [{ package: 'my-pkg', outputDir: 'data' }],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'purge', '--output', '/custom/base']);
+
+      expect(capturedCommand()).toContain(`--output "${path.resolve('/custom/base', 'data')}"`);
+    });
+
+    it('uses default entry when npmdata is absent', () => {
+      setupPackageJson({ name: 'my-pkg' });
+
+      run(BIN_DIR, ['node', 'script.js', 'purge']);
+
+      expect(mockExecSync).toHaveBeenCalledTimes(1);
+      expect(capturedCommand()).toContain('purge');
+      expect(capturedCommand()).toContain('--packages "my-pkg"');
+    });
+  });
+
+  describe('run – extract --dry-run from argv', () => {
+    it('adds --dry-run to the extract command when --dry-run is in argv', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [{ package: 'my-pkg', outputDir: '.' }],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'extract', '--dry-run']);
+
+      expect(capturedCommand()).toContain('--dry-run');
+    });
+
+    it('adds --silent to the extract command when --silent is in argv', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [{ package: 'my-pkg', outputDir: '.' }],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'extract', '--silent']);
+
+      expect(capturedCommand()).toContain('--silent');
+    });
+
+    it('merges argv --dry-run with entry dryRun:false (argv wins)', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [{ package: 'my-pkg', outputDir: '.', dryRun: false }],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'extract', '--dry-run']);
+
+      expect(capturedCommand()).toContain('--dry-run');
+    });
+
+    it('keeps --dry-run when already set in entry config', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [{ package: 'my-pkg', outputDir: '.', dryRun: true }],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'extract']);
+
+      expect(capturedCommand()).toContain('--dry-run');
+    });
+
+    it('applies --dry-run overlay to all entries', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [
+          { package: 'pkg-a', outputDir: './a' },
+          { package: 'pkg-b', outputDir: './b' },
+        ],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'extract', '--dry-run']);
+
+      expect(mockExecSync).toHaveBeenCalledTimes(2);
+      const cmds = capturedCommands();
+      expect(cmds.every((c) => c.includes('--dry-run'))).toBe(true);
     });
   });
 
