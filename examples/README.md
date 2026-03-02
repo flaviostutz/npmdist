@@ -17,7 +17,7 @@ bin/npmdata.js generated entry point script (created by `npmdata init`)
 Run `npmdata init` once to configure `package.json` so that the right folders are included on publish:
 
 ```sh
-pnpm dlx npmdata init --folders docs,data
+pnpm dlx npmdata init --files "docs/**,data/**"
 ```
 
 This updates `package.json` with:

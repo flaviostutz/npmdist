@@ -34,12 +34,26 @@ export type PublisherInitOptions = {
    * them together with the data contained in the package being initialized.
    */
   additionalPackages?: string[];
+
+  /**
+   * When true, adds managed files to .gitignore in all generated npmdata entries.
+   * Defaults to true. Set to false to disable.
+   */
+  gitignore?: boolean;
+
+  /**
+   * When true, mark all generated npmdata entries as unmanaged so that extracted
+   * files are written without a .npmdata marker, without updating .gitignore, and
+   * without being made read-only. Existing files are skipped rather than overwritten.
+   * Defaults to false.
+   */
+  unmanaged?: boolean;
 };
 
 export type InitResult = {
   success: boolean;
   message: string;
-  publishedFolders?: string[];
+  publishedFiles?: string[];
   additionalPackages?: string[];
   packageJsonPath?: string;
 };
@@ -53,24 +67,6 @@ function parsePublisherPackageSpec(spec: string): { name: string; version: strin
   return { name, version: version ?? 'latest' };
 }
 
-function validateFolders(
-  folders: string[],
-  workingDir: string,
-): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
-
-  for (const folder of folders) {
-    const folderPath = path.join(workingDir, folder);
-    if (!fs.existsSync(folderPath)) {
-      errors.push(`Folder not found: ${folder}`);
-    } else if (!fs.statSync(folderPath).isDirectory()) {
-      errors.push(`Not a directory: ${folder}`);
-    }
-  }
-
-  return { valid: errors.length === 0, errors };
-}
-
 function generateCliScript(): string {
   return `#!/usr/bin/env node
 
@@ -79,10 +75,13 @@ require('npmdata/dist/runner.js').run(__dirname);
 `;
 }
 
+// eslint-disable-next-line complexity
 function preparePackageJson(
-  folders: string[],
+  fileGlobs: string[],
   workingDir: string,
   additionalPackages: string[] = [],
+  gitignore = false,
+  unmanaged = false,
 ): PublishablePackageJson {
   const packageJsonPath = path.join(workingDir, 'package.json');
 
@@ -101,21 +100,10 @@ function preparePackageJson(
   if (!packageJson.name) packageJson.name = path.basename(workingDir);
   if (!packageJson.version) packageJson.version = '1.0.0';
 
-  // eslint-disable-next-line unicorn/no-keyword-prefix
-  const newFolderPatterns = folders.map((folder) => `${folder}/**`);
   const existingPatterns = (packageJson.files as string[]) ?? [];
-  const existingFolderPatterns = existingPatterns.filter((p) => p.endsWith('/**'));
-  const existingNonFolderPatterns = existingPatterns.filter((p) => !p.endsWith('/**'));
 
   packageJson.files = Array.from(
-    new Set([
-      // eslint-disable-next-line unicorn/no-keyword-prefix
-      ...newFolderPatterns,
-      ...existingFolderPatterns,
-      ...existingNonFolderPatterns,
-      'package.json',
-      'bin/npmdata.js',
-    ]),
+    new Set([...fileGlobs, ...existingPatterns, 'package.json', 'bin/npmdata.js']),
   );
 
   if (!packageJson.dependencies) {
@@ -138,6 +126,17 @@ function preparePackageJson(
     existingEntries.push({ package: mainName, outputDir: '.' });
   }
 
+  // Set file glob patterns and gitignore on all npmdata entries
+  for (const entry of existingEntries) {
+    entry.files = fileGlobs;
+    if (gitignore) {
+      entry.gitignore = true;
+    }
+    if (unmanaged) {
+      entry.unmanaged = true;
+    }
+  }
+
   // Add additional packages as separate entries (dedup by package name)
   for (const pkgSpec of additionalPackages) {
     const { name: pkgName, version: pkgVersion } = parsePublisherPackageSpec(pkgSpec);
@@ -146,7 +145,13 @@ function preparePackageJson(
       return name === pkgName;
     });
     if (!alreadyPresent) {
-      existingEntries.push({ package: pkgSpec, outputDir: '.' });
+      existingEntries.push({
+        package: pkgSpec,
+        outputDir: '.',
+        files: fileGlobs,
+        ...(gitignore ? { gitignore: true } : {}),
+        ...(unmanaged ? { unmanaged: true } : {}),
+      });
     }
     if (!packageJson.dependencies[pkgName]) {
       packageJson.dependencies[pkgName] = pkgVersion;
@@ -163,33 +168,34 @@ function preparePackageJson(
 }
 
 /**
- * Initialize publisher configuration with specified folders
+ * Initialize publisher configuration with specified file glob patterns
  */
 export async function initPublisher(
-  folders: string[],
+  fileGlobs: string[],
   options: PublisherInitOptions = {},
 ): Promise<InitResult> {
   const workingDir = options.workingDir ?? process.cwd();
   const additionalPackages = options.additionalPackages ?? [];
+  const gitignore = options.gitignore ?? true;
+  const unmanaged = options.unmanaged ?? false;
 
   // eslint-disable-next-line functional/no-try-statements
   try {
-    if (!folders || folders.length === 0) {
+    if (!fileGlobs || fileGlobs.length === 0) {
       return {
         success: false,
-        message: 'npmdata: no folders specified. Usage: npmdata init <folder1> <folder2> ...',
+        message:
+          'npmdata: no file patterns specified. Usage: npmdata init --files "docs/**,data/**"',
       };
     }
 
-    const validation = validateFolders(folders, workingDir);
-    if (!validation.valid) {
-      return {
-        success: false,
-        message: `npmdata: folder validation failed:\n${validation.errors.join('\n')}`,
-      };
-    }
-
-    const packageJson = preparePackageJson(folders, workingDir, additionalPackages);
+    const packageJson = preparePackageJson(
+      fileGlobs,
+      workingDir,
+      additionalPackages,
+      gitignore,
+      unmanaged,
+    );
     const packageJsonPath = path.join(workingDir, 'package.json');
     writeJsonFile(packageJsonPath, packageJson);
 
@@ -209,7 +215,7 @@ export async function initPublisher(
     return {
       success: true,
       message: 'npmdata: project initialization completed successfully',
-      publishedFolders: folders,
+      publishedFiles: fileGlobs,
       additionalPackages:
         // eslint-disable-next-line no-undefined
         finalAdditionalPackages.length > 0 ? finalAdditionalPackages : undefined,

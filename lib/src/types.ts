@@ -71,8 +71,18 @@ export type ConsumerConfig = FileFilterConfig & {
   /**
    * Automatically create/update a .gitignore file alongside each .npmdata marker file,
    * adding the managed files and the .npmdata file itself to be ignored by git.
+   * Defaults to true. Set to false to disable.
    */
   gitignore?: boolean;
+
+  /**
+   * When true, write files to disk without creating a .npmdata marker, without
+   * updating .gitignore, and without making files read-only. Files written with
+   * this flag are not tracked by npmdata and can be freely edited by the user.
+   * When a destination file already exists it is left untouched and reported as
+   * skipped. Takes precedence over force.
+   */
+  unmanaged?: boolean;
 
   /**
    * When true, simulate extraction without writing anything to disk.
@@ -216,6 +226,12 @@ export type NpmdataExtractEntry = {
   gitignore?: boolean;
 
   /**
+   * Write files without creating a .npmdata marker, updating .gitignore, or making
+   * files read-only. Existing files are skipped rather than overwritten (default: false).
+   */
+  unmanaged?: boolean;
+
+  /**
    * Simulate extraction without writing anything to disk (default: false).
    */
   dryRun?: boolean;
@@ -236,6 +252,13 @@ export type NpmdataExtractEntry = {
    * matches at least one pattern are extracted.
    */
   contentRegexes?: string[];
+
+  /**
+   * Tags used to group and selectively run entries. When the data package is invoked with
+   * --tags, only entries whose tags list includes at least one of the requested tags are
+   * processed. Entries with no tags are always skipped when a tag filter is active.
+   */
+  tags?: string[];
 };
 
 /**

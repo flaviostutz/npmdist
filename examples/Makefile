@@ -4,7 +4,7 @@ SHELL := /bin/bash
 	@echo "Unknown target: $@. Ignoring"
 
 init-publisher: install
-	pnpm exec npmdata init --folders docs,data --packages eslint@8
+	pnpm exec npmdata init --files "docs/**,data/**" --packages eslint@8
 
 build: install
 	rm -rf dist

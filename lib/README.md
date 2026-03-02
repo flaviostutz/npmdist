@@ -14,10 +14,24 @@ Publish folders as npm packages and extract them in any workspace. Use it to dis
 In the project whose folders you want to share:
 
 ```sh
-pnpm dlx npmdata init --folders "docs,data,configs"
+# share specific folders by glob pattern (required)
+pnpm dlx npmdata init --files "docs/**,data/**,configs/**"
+
+# also bundle an additional package so consumers get data from both sources
+pnpm dlx npmdata init --files "docs/**" --packages shared-configs@^1.0.0
+
+# share multiple additional packages at once
+pnpm dlx npmdata init --files "docs/**" --packages "shared-configs@^1.0.0,base-templates@2.x"
+
+# skip .gitignore entries for managed files (gitignore is enabled by default)
+pnpm dlx npmdata init --files "docs/**,data/**" --no-gitignore
+
+# mark extracted files as unmanaged so consumers can edit them freely;
+# files won't be tracked, made read-only, or added to .gitignore
+pnpm dlx npmdata init --files "templates/**" --unmanaged
 ```
 
-This updates `package.json` with the right `files`, `bin`, and `dependencies` fields so those folders are included when the package is published. Then publish normally:
+`init` updates `package.json` with the right `files`, `bin`, and `dependencies` fields so those folders are included when the package is published, and writes a thin `bin/npmdata.js` entry point. Then publish normally:
 
 ```sh
 npm publish
@@ -45,8 +59,12 @@ npx npmdata extract --packages my-shared-assets --content-regex "env: production
 # the new package takes ownership in the marker file
 npx npmdata extract --packages my-shared-assets --output ./data --force
 
-# also write .gitignore entries for managed files
-npx npmdata extract --packages my-shared-assets --output ./data --gitignore
+# skip .gitignore entries for managed files (gitignore is enabled by default)
+npx npmdata extract --packages my-shared-assets --output ./data --no-gitignore
+
+# write files without a .npmdata marker or .gitignore entry; files won't be read-only
+# and won't be tracked by npmdata; existing files are left unchanged
+npx npmdata extract --packages my-shared-assets --output ./data --unmanaged
 
 # preview what would change without writing any files
 npx npmdata extract --packages my-shared-assets --output ./data --dry-run
@@ -68,6 +86,27 @@ If the published package includes its own bin script (normally when it's prepare
 ```sh
 npx my-shared-assets extract --output ./data
 npx my-shared-assets check  --output ./data
+```
+
+When the data package defines multiple `npmdata` entries in its `package.json`, you can limit which entries are processed using the `--tags` option. Only entries whose `tags` list includes at least one of the requested tags will be extracted; entries with no tags are skipped when a tag filter is active.
+
+```sh
+# run only entries tagged with "prod"
+npx my-shared-assets --tags prod
+
+# run entries tagged with either "prod" or "staging"
+npx my-shared-assets --tags prod,staging
+```
+
+To use tags, add a `tags` array to each `npmdata` entry in the data package's `package.json`:
+
+```json
+{
+  "npmdata": [
+    { "package": "my-shared-assets", "outputDir": "./data", "tags": ["prod"] },
+    { "package": "my-dev-assets",    "outputDir": "./dev-data", "tags": ["dev", "staging"] }
+  ]
+}
 ```
 
 Check the /examples folder to see this in action
@@ -126,7 +165,18 @@ Global options:
   --version, -v    Show version
 
 Init options:
-  --folders <list>         Comma-separated folders to publish (required)
+  --files <patterns>       Comma-separated glob patterns of files to publish (required)
+                           e.g. "docs/**,data/**,configs/*.json"
+  --packages <specs>       Comma-separated additional package specs to bundle as data sources.
+                           Each spec is "name" or "name@version", e.g.
+                           "shared-configs@^1.0.0,base-templates@2.x".
+                           Listed under `npmdata.additionalPackages` in package.json and
+                           added to `dependencies` so consumers pull data from all of them.
+  --no-gitignore           Skip adding .gitignore entries for managed files
+                           (gitignore is enabled by default)
+  --unmanaged              Mark all generated npmdata entries as unmanaged: extracted files
+                           are written without a .npmdata marker, without updating .gitignore,
+                           and without being made read-only. Existing files are skipped.
 
 Extract options:
   --packages <specs>       Comma-separated package specs (required).
@@ -134,7 +184,10 @@ Extract options:
                            "my-pkg@^1.0.0,other-pkg@2.x"
   --output, -o <dir>       Output directory (default: current directory)
   --force                  Overwrite existing unmanaged files or files owned by a different package
-  --gitignore              Create/update .gitignore for managed files
+  --no-gitignore            Skip creating/updating .gitignore (gitignore is enabled by default)
+  --unmanaged              Write files without a .npmdata marker, .gitignore update, or read-only
+                           flag. Existing files are skipped. Files can be freely edited afterwards
+                           and are not tracked by npmdata.
   --files <patterns>       Comma-separated glob patterns to filter files
   --content-regex <regex>  Regex to filter files by content
   --dry-run                Preview changes without writing any files
@@ -177,6 +230,14 @@ await extract({
   packages: ['my-shared-assets@latest'],
   outputDir: './data',
   upgrade: true,
+});
+
+// extract without npmdata tracking: files are writable, no .npmdata marker is written,
+// no .gitignore entry is created. Existing files are left untouched (skipped).
+await extract({
+  packages: ['shared-templates'],
+  outputDir: './templates',
+  unmanaged: true,
 });
 
 // track progress file-by-file

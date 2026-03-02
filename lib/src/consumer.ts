@@ -407,6 +407,13 @@ async function extractFiles(
 
     const existingOwner = existingManagedMap.get(packageFile.relPath);
 
+    // In unmanaged mode, skip files that already exist on disk.
+    if (config.unmanaged && fs.existsSync(destPath)) {
+      changes.skipped.push(packageFile.relPath);
+      emit?.({ type: 'file-skipped', packageName, file: packageFile.relPath });
+      continue;
+    }
+
     if (fs.existsSync(destPath)) {
       if (existingOwner?.packageName === packageName) {
         if (calculateFileHash(packageFile.fullPath) === calculateFileHash(destPath)) {
@@ -450,18 +457,20 @@ async function extractFiles(
       wasForced = false;
     }
 
-    if (!dryRun && fs.existsSync(destPath)) fs.chmodSync(destPath, 0o444);
+    if (!dryRun && !config.unmanaged && fs.existsSync(destPath)) fs.chmodSync(destPath, 0o444);
 
-    const dir = path.dirname(packageFile.relPath) || '.';
-    if (!addedByDir.has(dir)) {
-      addedByDir.set(dir, []);
+    if (!config.unmanaged) {
+      const dir = path.dirname(packageFile.relPath) || '.';
+      if (!addedByDir.has(dir)) {
+        addedByDir.set(dir, []);
+      }
+      addedByDir.get(dir)!.push({
+        path: path.basename(packageFile.relPath),
+        packageName,
+        packageVersion: installedVersion,
+        force: wasForced,
+      });
     }
-    addedByDir.get(dir)!.push({
-      path: path.basename(packageFile.relPath),
-      packageName,
-      packageVersion: installedVersion,
-      force: wasForced,
-    });
   }
 
   // Delete files that were managed by this package but are no longer in the package
@@ -486,7 +495,7 @@ async function extractFiles(
     }
   }
 
-  if (!dryRun) {
+  if (!dryRun && !config.unmanaged) {
     // Write updated marker files
     // eslint-disable-next-line unicorn/no-keyword-prefix
     for (const [dir, newFiles] of addedByDir) {
@@ -593,9 +602,11 @@ export async function extract(config: ConsumerConfig): Promise<ConsumerResult> {
   }
 
   if (!dryRun) {
-    cleanupEmptyMarkers(config.outputDir);
-    // Always clean up .gitignore entries for removed files; only add new entries when gitignore: true.
-    updateGitignores(config.outputDir, config.gitignore ?? false);
+    if (!config.unmanaged) {
+      cleanupEmptyMarkers(config.outputDir);
+      // Always clean up .gitignore entries for removed files; only add new entries when gitignore: true.
+      updateGitignores(config.outputDir, config.gitignore ?? true);
+    }
     // Run after gitignore cleanup so dirs kept alive only by a .gitignore get removed.
     cleanupEmptyDirs(config.outputDir);
   }

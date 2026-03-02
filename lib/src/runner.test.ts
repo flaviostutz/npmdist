@@ -1,7 +1,8 @@
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 
-import { run } from './runner';
+import { run, parseTagsFromArgv, filterEntriesByTags } from './runner';
+import { NpmdataExtractEntry } from './types';
 
 jest.mock('node:child_process', () => ({
   execSync: jest.fn(),
@@ -109,7 +110,8 @@ describe('runner', () => {
       expect(cmd).toContain('--packages "my-pkg"');
       expect(cmd).toContain('--output "./out"');
       expect(cmd).not.toContain('--force');
-      expect(cmd).not.toContain('--gitignore');
+      expect(cmd).not.toContain('--no-gitignore');
+      expect(cmd).not.toContain('--unmanaged');
       expect(cmd).not.toContain('--silent');
       expect(cmd).not.toContain('--dry-run');
       expect(cmd).not.toContain('--upgrade');
@@ -139,7 +141,7 @@ describe('runner', () => {
       expect(capturedCommand()).not.toContain('--force');
     });
 
-    it('adds --gitignore when gitignore is true', () => {
+    it('omits --no-gitignore when gitignore is true', () => {
       setupPackageJson({
         name: 'irrelevant',
         npmdata: [{ package: 'my-pkg', outputDir: '.', gitignore: true }],
@@ -147,7 +149,18 @@ describe('runner', () => {
 
       run(BIN_DIR);
 
-      expect(capturedCommand()).toContain(' --gitignore');
+      expect(capturedCommand()).not.toContain('--no-gitignore');
+    });
+
+    it('adds --no-gitignore when gitignore is false', () => {
+      setupPackageJson({
+        name: 'irrelevant',
+        npmdata: [{ package: 'my-pkg', outputDir: '.', gitignore: false }],
+      });
+
+      run(BIN_DIR);
+
+      expect(capturedCommand()).toContain(' --no-gitignore');
     });
 
     it('adds --silent when silent is true', () => {
@@ -181,6 +194,28 @@ describe('runner', () => {
       run(BIN_DIR);
 
       expect(capturedCommand()).toContain(' --upgrade');
+    });
+
+    it('adds --unmanaged when unmanaged is true', () => {
+      setupPackageJson({
+        name: 'irrelevant',
+        npmdata: [{ package: 'my-pkg', outputDir: '.', unmanaged: true }],
+      });
+
+      run(BIN_DIR);
+
+      expect(capturedCommand()).toContain(' --unmanaged');
+    });
+
+    it('omits --unmanaged when unmanaged is false', () => {
+      setupPackageJson({
+        name: 'irrelevant',
+        npmdata: [{ package: 'my-pkg', outputDir: '.', unmanaged: false }],
+      });
+
+      run(BIN_DIR);
+
+      expect(capturedCommand()).not.toContain('--unmanaged');
     });
 
     it('adds --files with a single file pattern', () => {
@@ -257,7 +292,7 @@ describe('runner', () => {
             package: 'full-pkg@^2.0.0',
             outputDir: './data',
             force: true,
-            gitignore: true,
+            gitignore: false,
             silent: true,
             dryRun: true,
             upgrade: true,
@@ -273,7 +308,7 @@ describe('runner', () => {
       expect(cmd).toContain('--packages "full-pkg@^2.0.0"');
       expect(cmd).toContain('--output "./data"');
       expect(cmd).toContain(' --force');
-      expect(cmd).toContain(' --gitignore');
+      expect(cmd).toContain(' --no-gitignore');
       expect(cmd).toContain(' --silent');
       expect(cmd).toContain(' --dry-run');
       expect(cmd).toContain(' --upgrade');
@@ -292,6 +327,162 @@ describe('runner', () => {
       // The command must reference an absolute path to main.js and contain the extract sub-command.
       expect(capturedCommand()).toMatch(/node ".+main\.js"/);
       expect(capturedCommand()).toContain('extract');
+    });
+  });
+
+  describe('parseTagsFromArgv', () => {
+    it('returns an empty array when --tags is not present', () => {
+      expect(parseTagsFromArgv(['node', 'script.js'])).toEqual([]);
+    });
+
+    it('returns a single tag when --tags has one value', () => {
+      expect(parseTagsFromArgv(['node', 'script.js', '--tags', 'prod'])).toEqual(['prod']);
+    });
+
+    it('splits comma-separated tags', () => {
+      expect(parseTagsFromArgv(['node', 'script.js', '--tags', 'prod,staging'])).toEqual([
+        'prod',
+        'staging',
+      ]);
+    });
+
+    it('trims whitespace from tags', () => {
+      expect(parseTagsFromArgv(['node', 'script.js', '--tags', ' prod , staging '])).toEqual([
+        'prod',
+        'staging',
+      ]);
+    });
+
+    it('ignores --tags when there is no following value', () => {
+      expect(parseTagsFromArgv(['node', 'script.js', '--tags'])).toEqual([]);
+    });
+
+    it('filters out empty strings produced by trailing commas', () => {
+      expect(parseTagsFromArgv(['node', 'script.js', '--tags', 'prod,'])).toEqual(['prod']);
+    });
+  });
+
+  describe('filterEntriesByTags', () => {
+    const entryA: NpmdataExtractEntry = { package: 'pkg-a', outputDir: './a', tags: ['prod'] };
+    const entryB: NpmdataExtractEntry = {
+      package: 'pkg-b',
+      outputDir: './b',
+      tags: ['staging', 'prod'],
+    };
+    const entryC: NpmdataExtractEntry = { package: 'pkg-c', outputDir: './c', tags: ['dev'] };
+    const entryNoTags: NpmdataExtractEntry = { package: 'pkg-d', outputDir: './d' };
+
+    it('returns all entries when requestedTags is empty', () => {
+      expect(filterEntriesByTags([entryA, entryB, entryC, entryNoTags], [])).toEqual([
+        entryA,
+        entryB,
+        entryC,
+        entryNoTags,
+      ]);
+    });
+
+    it('returns only entries matching the requested tag', () => {
+      expect(filterEntriesByTags([entryA, entryB, entryC, entryNoTags], ['prod'])).toEqual([
+        entryA,
+        entryB,
+      ]);
+    });
+
+    it('returns entries matching any of the requested tags', () => {
+      expect(
+        filterEntriesByTags([entryA, entryB, entryC, entryNoTags], ['dev', 'staging']),
+      ).toEqual([entryB, entryC]);
+    });
+
+    it('excludes entries with no tags when a tag filter is active', () => {
+      expect(filterEntriesByTags([entryNoTags], ['prod'])).toEqual([]);
+    });
+
+    it('returns an empty array when no entries match', () => {
+      expect(filterEntriesByTags([entryA, entryC], ['staging'])).toEqual([]);
+    });
+  });
+
+  describe('run – tags filtering', () => {
+    it('runs all entries when --tags is not provided', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [
+          { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
+          { package: 'pkg-b', outputDir: './b', tags: ['staging'] },
+        ],
+      });
+
+      run(BIN_DIR, ['node', 'script.js']);
+
+      expect(mockExecSync).toHaveBeenCalledTimes(2);
+    });
+
+    it('runs only entries matching the requested tag', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [
+          { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
+          { package: 'pkg-b', outputDir: './b', tags: ['staging'] },
+        ],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', '--tags', 'prod']);
+
+      expect(mockExecSync).toHaveBeenCalledTimes(1);
+      expect(capturedCommand()).toContain('--packages "pkg-a"');
+    });
+
+    it('runs entries matching any of the requested tags', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [
+          { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
+          { package: 'pkg-b', outputDir: './b', tags: ['staging'] },
+          { package: 'pkg-c', outputDir: './c', tags: ['dev'] },
+        ],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', '--tags', 'prod,staging']);
+
+      expect(mockExecSync).toHaveBeenCalledTimes(2);
+    });
+
+    it('runs no entries when no entry matches the requested tag', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [{ package: 'pkg-a', outputDir: './a', tags: ['dev'] }],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', '--tags', 'prod']);
+
+      expect(mockExecSync).not.toHaveBeenCalled();
+    });
+
+    it('skips entries without tags when a tag filter is active', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [
+          { package: 'pkg-a', outputDir: './a' },
+          { package: 'pkg-b', outputDir: './b', tags: ['prod'] },
+        ],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', '--tags', 'prod']);
+
+      expect(mockExecSync).toHaveBeenCalledTimes(1);
+      expect(capturedCommand()).toContain('--packages "pkg-b"');
+    });
+
+    it('does not pass --tags to the extract command', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [{ package: 'pkg-a', outputDir: './a', tags: ['prod'] }],
+      });
+
+      run(BIN_DIR, ['node', 'script.js', '--tags', 'prod']);
+
+      expect(capturedCommand()).not.toContain('--tags');
     });
   });
 });

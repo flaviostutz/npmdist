@@ -7,8 +7,11 @@ This is an example **consumer** project. It installs `example-files-package` (th
 `example-files-package` was prepared with `npmdata init`, so it ships a `bin/npmdata.js` entry point. After installing the package, consumers can call that script directly — no separate `npmdata` invocation needed:
 
 ```sh
-# extract only docs files and write .gitignore entries
-pnpm exec example-files-package extract --files "docs/**/*" --gitignore
+# extract only docs files (.gitignore entries are written by default)
+pnpm exec example-files-package extract --files "docs/**/*"
+
+# extract without writing .gitignore entries
+pnpm exec example-files-package extract --files "docs/**/*" --no-gitignore
 
 # preview what would change before writing anything
 pnpm exec example-files-package extract --files "docs/**/*" --dry-run
@@ -20,7 +23,7 @@ pnpm exec example-files-package check
 Alternatively, use `npmdata` directly and point it at the installed package:
 
 ```sh
-pnpm exec npmdata extract --packages example-files-package --files "docs/**/*" --gitignore
+pnpm exec npmdata extract --packages example-files-package --files "docs/**/*"
 pnpm exec npmdata check  --packages example-files-package
 pnpm exec npmdata list
 ```

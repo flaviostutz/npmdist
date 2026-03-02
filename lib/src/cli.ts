@@ -40,35 +40,47 @@ export async function cli(processArgs: string[]): Promise<number> {
   // Handle init command
   if (command === 'init') {
     // eslint-disable-next-line functional/no-let
-    let sourceFoldersFlag: string | undefined;
+    let sourceFilesFlag: string | undefined;
     // eslint-disable-next-line functional/no-let
     let additionalPackagesFlag: string | undefined;
+    // eslint-disable-next-line functional/no-let
+    let initGitignore = true;
+    // eslint-disable-next-line functional/no-let
+    let initUnmanaged = false;
 
-    // Parse args for --folders and --packages flags
+    // Parse args for --files and --packages flags
     // eslint-disable-next-line functional/no-let
     for (let i = 1; i < args.length; i += 1) {
-      if (args[i] === '--folders') {
+      if (args[i] === '--files') {
         // eslint-disable-next-line no-plusplus
-        sourceFoldersFlag = args[++i];
+        sourceFilesFlag = args[++i];
       } else if (args[i] === '--packages') {
         // eslint-disable-next-line no-plusplus
         additionalPackagesFlag = args[++i];
+      } else if (args[i] === '--no-gitignore') {
+        initGitignore = false;
+      } else if (args[i] === '--unmanaged') {
+        initUnmanaged = true;
       }
     }
 
-    // --folders is required
-    if (!sourceFoldersFlag) {
-      console.error('Error: --folders option is required for init command');
+    // --files is required
+    if (!sourceFilesFlag) {
+      console.error('Error: --files option is required for init command');
       printUsage();
       return 1;
     }
 
-    const folders = sourceFoldersFlag.split(',').map((f) => f.trim());
+    const fileGlobs = sourceFilesFlag.split(',').map((f) => f.trim());
     const additionalPackages = additionalPackagesFlag
       ? additionalPackagesFlag.split(',').map((p) => p.trim())
       : [];
 
-    const result = await initPublisher(folders, { additionalPackages });
+    const result = await initPublisher(fileGlobs, {
+      additionalPackages,
+      gitignore: initGitignore,
+      ...(initUnmanaged ? { unmanaged: true } : {}),
+    });
 
     if (!result.success) {
       console.error(`\nError: ${result.message}`);
@@ -76,9 +88,9 @@ export async function cli(processArgs: string[]): Promise<number> {
     }
 
     console.log(`\n${result.message}`);
-    if (result.publishedFolders) {
+    if (result.publishedFiles) {
       console.log(
-        `\nThe following folders will be published: ${result.publishedFolders.join(', ')}`,
+        `\nThe following file patterns will be published: ${result.publishedFiles.join(', ')}`,
       );
     }
     if (result.additionalPackages && result.additionalPackages.length > 0) {
@@ -133,10 +145,11 @@ export async function cli(processArgs: string[]): Promise<number> {
   // Parse options common to extract and check
   let packageSpecs: string | undefined;
   let force = false;
-  let gitignore = false;
+  let gitignore = true;
   let dryRun = false;
   let upgrade = false;
   let silent = false;
+  let unmanaged = false;
   let filenamePatterns: string | undefined;
   let contentRegexes: string | undefined;
   let outDir = process.cwd();
@@ -149,12 +162,14 @@ export async function cli(processArgs: string[]): Promise<number> {
       force = true;
     } else if (args[i] === '--silent') {
       silent = true;
-    } else if (args[i] === '--gitignore') {
-      gitignore = true;
+    } else if (args[i] === '--no-gitignore') {
+      gitignore = false;
     } else if (args[i] === '--dry-run') {
       dryRun = true;
     } else if (args[i] === '--upgrade') {
       upgrade = true;
+    } else if (args[i] === '--unmanaged') {
+      unmanaged = true;
     } else if (args[i] === '--files') {
       filenamePatterns = args[++i];
     } else if (args[i] === '--content-regex') {
@@ -210,6 +225,7 @@ export async function cli(processArgs: string[]): Promise<number> {
     gitignore,
     dryRun,
     upgrade,
+    unmanaged,
     onProgress,
     filenamePatterns: filenamePatterns
       ? filenamePatterns.split(',')
@@ -283,10 +299,12 @@ Global Options:
   --version, -v                Show version
 
 Init Options:
-  --folders <folders>          Comma-separated list of source folders to publish (required)
+  --files <patterns>           Comma-separated glob patterns of files to publish (required)
+                               e.g. "docs/**,data/**,configs/*.json"
   --packages <specs>           Comma-separated additional package specs to use as data sources.
                                Each spec is "name" or "name@version"
                                e.g. "shared-data@^1.0.0,other-pkg@2.x"
+  --unmanaged                  Mark all npmdata entries as unmanaged (see Extract options)
 
 Extract / Check Options:
   --packages <specs>           Comma-separated package specs to extract from (required).
@@ -294,7 +312,10 @@ Extract / Check Options:
                                e.g. "my-pkg@^1.2.3,other-pkg@2.x"
   --output, -o <dir>           Output directory (default: current directory, with a warning)
   --force                      Allow overwriting existing unmanaged files
-  --gitignore                  Create/update .gitignore to ignore managed files and .npmdata
+  --no-gitignore               Skip creating/updating .gitignore (gitignore is enabled by default)
+  --unmanaged                  Write files without a .npmdata marker, .gitignore update, or
+                               read-only flag. Existing files are skipped. Files can be freely
+                               edited afterwards and are not tracked by npmdata.
   --dry-run                    Simulate extraction without writing any files
   --upgrade                    Re-install packages even when a satisfying version is installed
   --silent                     Print only the final result line, suppressing package and file listing
@@ -305,7 +326,7 @@ List Options:
   --output, -o <dir>           Directory to inspect (default: current directory)
 
 Examples:
-  npx npmdata init --folders "data,docs,config"
+  npx npmdata init --files "data/**,docs/**,configs/*.json"
   npx npmdata extract --packages mydataset --output ./data
   npx npmdata extract --packages mydataset@^2.0.0 --output ./data
   npx npmdata extract --packages "mydataset@^2.0.0,otherpkg@1.x" --output ./data

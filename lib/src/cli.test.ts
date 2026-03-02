@@ -122,32 +122,35 @@ describe('CLI', () => {
   });
 
   describe('init command', () => {
-    it('should return 1 when --folders flag is missing', async () => {
+    it('should return 1 when --files flag is missing', async () => {
       const exitCode = await cli(['node', 'cli.js', 'init']);
       expect(exitCode).toBe(1);
       expect(console.error).toHaveBeenCalledWith(
-        expect.stringContaining('--folders option is required'),
+        expect.stringContaining('--files option is required'),
       );
     });
 
-    it('should parse --folders and call initPublisher on success', async () => {
+    it('should parse --files and call initPublisher on success', async () => {
       mockInitPublisher.mockResolvedValue({
         success: true,
         message: 'Initialized successfully',
-        publishedFolders: ['docs', 'src'],
+        publishedFiles: ['docs/**', 'src/**'],
       });
 
-      const exitCode = await cli(['node', 'cli.js', 'init', '--folders', 'docs,src']);
+      const exitCode = await cli(['node', 'cli.js', 'init', '--files', 'docs/**,src/**']);
 
       expect(exitCode).toBe(0);
-      expect(mockInitPublisher).toHaveBeenCalledWith(['docs', 'src'], { additionalPackages: [] });
+      expect(mockInitPublisher).toHaveBeenCalledWith(['docs/**', 'src/**'], {
+        additionalPackages: [],
+        gitignore: true,
+      });
     });
 
     it('should parse --packages and pass additionalPackages to initPublisher', async () => {
       mockInitPublisher.mockResolvedValue({
         success: true,
         message: 'Initialized successfully',
-        publishedFolders: ['docs'],
+        publishedFiles: ['docs/**'],
         additionalPackages: ['shared-data@^1.0.0', 'other-pkg'],
       });
 
@@ -155,48 +158,80 @@ describe('CLI', () => {
         'node',
         'cli.js',
         'init',
-        '--folders',
-        'docs',
+        '--files',
+        'docs/**',
         '--packages',
         'shared-data@^1.0.0,other-pkg',
       ]);
 
       expect(exitCode).toBe(0);
-      expect(mockInitPublisher).toHaveBeenCalledWith(['docs'], {
+      expect(mockInitPublisher).toHaveBeenCalledWith(['docs/**'], {
         additionalPackages: ['shared-data@^1.0.0', 'other-pkg'],
+        gitignore: true,
       });
     });
 
-    it('should return 0 when initPublisher succeeds with publishedFolders', async () => {
+    it('should return 0 when initPublisher succeeds with publishedFiles', async () => {
       mockInitPublisher.mockResolvedValue({
         success: true,
         message: 'Done',
-        publishedFolders: ['docs'],
+        publishedFiles: ['docs/**'],
       });
 
-      const exitCode = await cli(['node', 'cli.js', 'init', '--folders', 'docs']);
+      const exitCode = await cli(['node', 'cli.js', 'init', '--files', 'docs/**']);
       expect(exitCode).toBe(0);
     });
 
-    it('should return 0 when initPublisher succeeds without publishedFolders', async () => {
+    it('should return 0 when initPublisher succeeds without publishedFiles', async () => {
       mockInitPublisher.mockResolvedValue({
         success: true,
         message: 'Done',
       });
 
-      const exitCode = await cli(['node', 'cli.js', 'init', '--folders', 'docs']);
+      const exitCode = await cli(['node', 'cli.js', 'init', '--files', 'docs/**']);
       expect(exitCode).toBe(0);
     });
 
     it('should return 1 when initPublisher fails', async () => {
       mockInitPublisher.mockResolvedValue({
         success: false,
-        message: 'Initialization failed: folder not found',
+        message: 'Initialization failed: something went wrong',
       });
 
-      const exitCode = await cli(['node', 'cli.js', 'init', '--folders', 'nonexistent']);
+      const exitCode = await cli(['node', 'cli.js', 'init', '--files', 'nonexistent/**']);
       expect(exitCode).toBe(1);
       expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Initialization failed'));
+    });
+
+    it('should pass gitignore=false to initPublisher when --no-gitignore flag is set', async () => {
+      mockInitPublisher.mockResolvedValue({
+        success: true,
+        message: 'Done',
+        publishedFiles: ['docs/**'],
+      });
+
+      await cli(['node', 'cli.js', 'init', '--files', 'docs/**', '--no-gitignore']);
+
+      expect(mockInitPublisher).toHaveBeenCalledWith(['docs/**'], {
+        additionalPackages: [],
+        gitignore: false,
+      });
+    });
+
+    it('should pass unmanaged=true to initPublisher when --unmanaged flag is set', async () => {
+      mockInitPublisher.mockResolvedValue({
+        success: true,
+        message: 'Done',
+        publishedFiles: ['docs/**'],
+      });
+
+      await cli(['node', 'cli.js', 'init', '--files', 'docs/**', '--unmanaged']);
+
+      expect(mockInitPublisher).toHaveBeenCalledWith(['docs/**'], {
+        additionalPackages: [],
+        gitignore: true,
+        unmanaged: true,
+      });
     });
   });
 
@@ -288,6 +323,50 @@ describe('CLI', () => {
 
       const config = mockExtract.mock.calls[0][0];
       expect(config.force).toBe(true);
+    });
+
+    it('should pass gitignore=true by default to extract config', async () => {
+      mockExtract.mockResolvedValue(defaultExtractResult);
+
+      await cli(['node', 'cli.js', 'extract', '--packages', 'my-pkg', './output']);
+
+      const config = mockExtract.mock.calls[0][0];
+      expect(config.gitignore).toBe(true);
+    });
+
+    it('should pass gitignore=false when --no-gitignore flag is set for extract', async () => {
+      mockExtract.mockResolvedValue(defaultExtractResult);
+
+      await cli([
+        'node',
+        'cli.js',
+        'extract',
+        '--packages',
+        'my-pkg',
+        './output',
+        '--no-gitignore',
+      ]);
+
+      const config = mockExtract.mock.calls[0][0];
+      expect(config.gitignore).toBe(false);
+    });
+
+    it('should pass unmanaged=true to extract config when --unmanaged flag is set', async () => {
+      mockExtract.mockResolvedValue(defaultExtractResult);
+
+      await cli(['node', 'cli.js', 'extract', '--packages', 'my-pkg', './output', '--unmanaged']);
+
+      const config = mockExtract.mock.calls[0][0];
+      expect(config.unmanaged).toBe(true);
+    });
+
+    it('should default unmanaged to false in extract config', async () => {
+      mockExtract.mockResolvedValue(defaultExtractResult);
+
+      await cli(['node', 'cli.js', 'extract', '--packages', 'my-pkg', './output']);
+
+      const config = mockExtract.mock.calls[0][0];
+      expect(config.unmanaged).toBe(false);
     });
 
     it('should pass version in package spec to extract config', async () => {

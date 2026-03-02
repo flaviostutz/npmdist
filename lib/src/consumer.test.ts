@@ -90,6 +90,109 @@ describe('Consumer', () => {
       expect(mode).toBe(0o444);
     });
 
+    it('should extract files without .npmdata marker when unmanaged is true', async () => {
+      const outputDir = path.join(tmpDir, 'output');
+
+      await installMockPackage(
+        'test-unmanaged-package',
+        {
+          'docs/guide.md': '# Guide',
+          'README.md': '# Package',
+        },
+        tmpDir,
+      );
+
+      await extract({
+        packages: ['test-unmanaged-package'],
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+        unmanaged: true,
+        filenamePatterns: ['**'],
+      });
+
+      expect(fs.existsSync(path.join(outputDir, 'README.md'))).toBe(true);
+      expect(fs.existsSync(path.join(outputDir, 'docs', 'guide.md'))).toBe(true);
+
+      // No .npmdata marker files should be created
+      expect(fs.existsSync(path.join(outputDir, '.npmdata'))).toBe(false);
+      expect(fs.existsSync(path.join(outputDir, 'docs', '.npmdata'))).toBe(false);
+    });
+
+    it('should not make files read-only when unmanaged is true', async () => {
+      const outputDir = path.join(tmpDir, 'output');
+
+      await installMockPackage(
+        'test-unmanaged-writable-package',
+        { 'template.md': '# Template' },
+        tmpDir,
+      );
+
+      await extract({
+        packages: ['test-unmanaged-writable-package'],
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+        unmanaged: true,
+      });
+
+      const extractedFile = path.join(outputDir, 'template.md');
+      expect(fs.existsSync(extractedFile)).toBe(true);
+
+      const stats = fs.statSync(extractedFile);
+      // File should have write permission (i.e., not be strictly 0o444 read-only)
+      // eslint-disable-next-line no-bitwise
+      expect(stats.mode & 0o200).toBeGreaterThan(0);
+    });
+
+    it('should skip existing files when unmanaged is true', async () => {
+      const outputDir = path.join(tmpDir, 'output');
+      fs.mkdirSync(outputDir, { recursive: true });
+
+      const originalContent = 'original user content';
+      fs.writeFileSync(path.join(outputDir, 'guide.md'), originalContent);
+
+      await installMockPackage(
+        'test-unmanaged-skip-package',
+        { 'guide.md': '# Package version' },
+        tmpDir,
+      );
+
+      const result = await extract({
+        packages: ['test-unmanaged-skip-package'],
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+        unmanaged: true,
+      });
+
+      // Existing file must not be overwritten
+      expect(fs.readFileSync(path.join(outputDir, 'guide.md'), 'utf8')).toBe(originalContent);
+
+      // File should be reported as skipped
+      expect(result.skipped).toContain('guide.md');
+      expect(result.modified).not.toContain('guide.md');
+      expect(result.added).not.toContain('guide.md');
+    });
+
+    it('should not update .gitignore when unmanaged is true', async () => {
+      const outputDir = path.join(tmpDir, 'output');
+
+      await installMockPackage('test-unmanaged-gitignore-package', { 'data.json': '{}' }, tmpDir);
+
+      await extract({
+        packages: ['test-unmanaged-gitignore-package'],
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+        unmanaged: true,
+        gitignore: true,
+      });
+
+      // No .gitignore should be created even with gitignore: true
+      expect(fs.existsSync(path.join(outputDir, '.gitignore'))).toBe(false);
+    });
+
     it('should update managed files on second extraction of the same package', async () => {
       const outputDir = path.join(tmpDir, 'output');
 
@@ -441,7 +544,7 @@ describe('Consumer', () => {
       expect(docsGitignore).toContain('api.md');
     });
 
-    it('should not create .gitignore when gitignore option is not set', async () => {
+    it('should not create .gitignore when gitignore option is false', async () => {
       const outputDir = path.join(tmpDir, 'output');
 
       await installMockPackage('test-no-gitignore-package', { 'README.md': '# Test' }, tmpDir);
@@ -451,9 +554,31 @@ describe('Consumer', () => {
         outputDir,
         packageManager: 'pnpm',
         cwd: tmpDir,
+        gitignore: false,
       });
 
       expect(fs.existsSync(path.join(outputDir, '.gitignore'))).toBe(false);
+    });
+
+    it('should create .gitignore by default when gitignore option is not specified', async () => {
+      const outputDir = path.join(tmpDir, 'output');
+
+      await installMockPackage('test-default-gitignore-package', { 'data.json': '{}' }, tmpDir);
+
+      await extract({
+        packages: ['test-default-gitignore-package'],
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+      });
+
+      const gitignorePath = path.join(outputDir, '.gitignore');
+      expect(fs.existsSync(gitignorePath)).toBe(true);
+      const content = fs.readFileSync(gitignorePath, 'utf8');
+      expect(content).toContain('.npmdata');
+      expect(content).toContain('data.json');
+      expect(content).toContain('# npmdata:start');
+      expect(content).toContain('# npmdata:end');
     });
 
     it('should preserve existing .gitignore content when updating managed section', async () => {

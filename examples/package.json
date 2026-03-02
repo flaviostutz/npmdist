@@ -13,10 +13,25 @@
     "package.json",
     "bin/npmdata.js"
   ],
-  "npmdata": {
-    "additionalPackages": [
-      "eslint@8"
-    ]
-  },
+  "npmdata": [
+    {
+      "package": "example-files-package",
+      "outputDir": ".",
+      "files": [
+        "docs/**",
+        "data/**"
+      ],
+      "gitignore": true
+    },
+    {
+      "package": "eslint@8",
+      "outputDir": ".",
+      "files": [
+        "docs/**",
+        "data/**"
+      ],
+      "gitignore": true
+    }
+  ],
   "bin": "bin/npmdata.js"
 }

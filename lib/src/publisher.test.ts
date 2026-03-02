@@ -19,49 +19,34 @@ describe('Publisher', () => {
   });
 
   describe('initPublisher', () => {
-    it('should return error when no folders specified', async () => {
+    it('should return error when no file patterns specified', async () => {
       const result = await initPublisher([]);
       expect(result.success).toBe(false);
-      expect(result.message).toContain('no folders specified');
+      expect(result.message).toContain('no file patterns specified');
     });
 
-    it('should return error when folder does not exist', async () => {
-      const result = await initPublisher(['nonexistent-folder'], { workingDir: tmpDir });
-      expect(result.success).toBe(false);
-      expect(result.message).toContain('folder validation failed');
-      expect(result.message).toContain('nonexistent-folder');
-    });
-
-    it('should return error when path is a file, not a directory', async () => {
-      const filePath = path.join(tmpDir, 'somefile.txt');
-      fs.writeFileSync(filePath, 'content');
-      const result = await initPublisher(['somefile.txt'], { workingDir: tmpDir });
-      expect(result.success).toBe(false);
-      expect(result.message).toContain('Not a directory');
-    });
-
-    it('should return error when one of several folders does not exist', async () => {
-      fs.mkdirSync(path.join(tmpDir, 'docs'));
-      const result = await initPublisher(['docs', 'missing-folder'], { workingDir: tmpDir });
-      expect(result.success).toBe(false);
-      expect(result.message).toContain('missing-folder');
-    });
-
-    it('should successfully initialize with a valid folder', async () => {
+    it('should successfully initialize with a valid glob pattern for a folder', async () => {
       fs.mkdirSync(path.join(tmpDir, 'docs'));
 
-      const result = await initPublisher(['docs'], { workingDir: tmpDir });
+      const result = await initPublisher(['docs/**'], { workingDir: tmpDir });
 
       expect(result.success).toBe(true);
       expect(result.message).toContain('completed successfully');
-      expect(result.publishedFolders).toContain('docs');
+      expect(result.publishedFiles).toContain('docs/**');
       expect(result.packageJsonPath).toBe(path.join(tmpDir, 'package.json'));
+    });
+
+    it('should successfully initialize with any glob pattern (no filesystem validation)', async () => {
+      const result = await initPublisher(['nonexistent/**'], { workingDir: tmpDir });
+
+      expect(result.success).toBe(true);
+      expect(result.publishedFiles).toContain('nonexistent/**');
     });
 
     it('should create package.json with correct content', async () => {
       fs.mkdirSync(path.join(tmpDir, 'docs'));
 
-      await initPublisher(['docs'], { workingDir: tmpDir });
+      await initPublisher(['docs/**'], { workingDir: tmpDir });
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
       expect(pkgJson.files).toContain('docs/**');
@@ -73,10 +58,24 @@ describe('Publisher', () => {
       expect(pkgJson.version).toBe('1.0.0');
     });
 
+    it('should set files glob on all npmdata entries', async () => {
+      fs.mkdirSync(path.join(tmpDir, 'docs'));
+
+      await initPublisher(['docs/**', 'configs/*.json'], { workingDir: tmpDir });
+
+      const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
+      const entries = pkgJson.npmdata as Array<{ package: string; files: string[] }>;
+      // eslint-disable-next-line no-restricted-syntax
+      for (const entry of entries) {
+        expect(entry.files).toContain('docs/**');
+        expect(entry.files).toContain('configs/*.json');
+      }
+    });
+
     it('should create cli extract script', async () => {
       fs.mkdirSync(path.join(tmpDir, 'docs'));
 
-      await initPublisher(['docs'], { workingDir: tmpDir });
+      await initPublisher(['docs/**'], { workingDir: tmpDir });
 
       const cliScriptPath = path.join(tmpDir, 'bin', 'npmdata.js');
       expect(fs.existsSync(cliScriptPath)).toBe(true);
@@ -88,7 +87,7 @@ describe('Publisher', () => {
     it('should make cli script executable', async () => {
       fs.mkdirSync(path.join(tmpDir, 'docs'));
 
-      await initPublisher(['docs'], { workingDir: tmpDir });
+      await initPublisher(['docs/**'], { workingDir: tmpDir });
 
       const cliScriptPath = path.join(tmpDir, 'bin', 'npmdata.js');
       const stats = fs.statSync(cliScriptPath);
@@ -107,7 +106,7 @@ describe('Publisher', () => {
       };
       fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify(existingPkg));
 
-      await initPublisher(['docs'], { workingDir: tmpDir });
+      await initPublisher(['docs/**'], { workingDir: tmpDir });
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
       expect(pkgJson.name).toBe('my-existing-package');
@@ -117,36 +116,35 @@ describe('Publisher', () => {
       expect(pkgJson.files).toContain('existing/**');
     });
 
-    it('should initialize with multiple folders', async () => {
+    it('should initialize with multiple glob patterns', async () => {
       fs.mkdirSync(path.join(tmpDir, 'docs'));
       fs.mkdirSync(path.join(tmpDir, 'src'));
 
-      const result = await initPublisher(['docs', 'src'], { workingDir: tmpDir });
+      const result = await initPublisher(['docs/**', 'src/**'], { workingDir: tmpDir });
 
       expect(result.success).toBe(true);
-      expect(result.publishedFolders).toEqual(['docs', 'src']);
+      expect(result.publishedFiles).toEqual(['docs/**', 'src/**']);
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
       expect(pkgJson.files).toContain('docs/**');
       expect(pkgJson.files).toContain('src/**');
     });
 
-    it('should not duplicate folder patterns on re-init', async () => {
+    it('should not duplicate glob patterns on re-init', async () => {
       fs.mkdirSync(path.join(tmpDir, 'docs'));
 
-      await initPublisher(['docs'], { workingDir: tmpDir });
-      await initPublisher(['docs'], { workingDir: tmpDir });
+      await initPublisher(['docs/**'], { workingDir: tmpDir });
+      await initPublisher(['docs/**'], { workingDir: tmpDir });
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
       const docsPatterns = pkgJson.files.filter((f: string) => f === 'docs/**');
       expect(docsPatterns).toHaveLength(1);
     });
 
-    it('should use process.cwd() as workingDir when not specified', async () => {
-      // initPublisher without workingDir option - just ensure it doesn't crash
-      // (it will use process.cwd() which is the lib dir - which has no docs folder)
-      const result = await initPublisher(['nonexistent-folder-xyz']);
-      expect(result.success).toBe(false);
+    it('should use workingDir option when specified', async () => {
+      // initPublisher with a tmpDir workingDir - glob patterns need no filesystem validation
+      const result = await initPublisher(['nonexistent-xyz/**'], { workingDir: tmpDir });
+      expect(result.success).toBe(true);
     });
 
     it('should preserve existing non-folder file patterns', async () => {
@@ -159,7 +157,7 @@ describe('Publisher', () => {
       };
       fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify(existingPkg));
 
-      await initPublisher(['docs'], { workingDir: tmpDir });
+      await initPublisher(['docs/**'], { workingDir: tmpDir });
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
       expect(pkgJson.files).toContain('LICENSE');
@@ -172,7 +170,7 @@ describe('Publisher', () => {
       const existingPkg = { name: 'my-package', version: '1.0.0' };
       fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify(existingPkg));
 
-      await initPublisher(['docs'], { workingDir: tmpDir });
+      await initPublisher(['docs/**'], { workingDir: tmpDir });
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
       // Should be pinned to actual version (^x.y.z) rather than 'latest'
@@ -191,7 +189,7 @@ describe('Publisher', () => {
       };
       fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify(existingPkg));
 
-      await initPublisher(['docs'], { workingDir: tmpDir });
+      await initPublisher(['docs/**'], { workingDir: tmpDir });
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
       expect(pkgJson.bin).toBe('bin/my-custom-entry.js');
@@ -203,7 +201,7 @@ describe('Publisher', () => {
       const existingPkg = { version: '1.0.0' };
       fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify(existingPkg));
 
-      await initPublisher(['docs'], { workingDir: tmpDir });
+      await initPublisher(['docs/**'], { workingDir: tmpDir });
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
       expect(pkgJson.name).toBe(path.basename(tmpDir));
@@ -212,7 +210,7 @@ describe('Publisher', () => {
     it('should store additional packages in package.json npmdata field', async () => {
       fs.mkdirSync(path.join(tmpDir, 'docs'));
 
-      const result = await initPublisher(['docs'], {
+      const result = await initPublisher(['docs/**'], {
         workingDir: tmpDir,
         additionalPackages: ['shared-data@^1.0.0', 'other-pkg'],
       });
@@ -229,7 +227,7 @@ describe('Publisher', () => {
     it('should add additional packages to dependencies', async () => {
       fs.mkdirSync(path.join(tmpDir, 'docs'));
 
-      await initPublisher(['docs'], {
+      await initPublisher(['docs/**'], {
         workingDir: tmpDir,
         additionalPackages: ['shared-data@^1.0.0', 'other-pkg'],
       });
@@ -242,11 +240,11 @@ describe('Publisher', () => {
     it('should not duplicate additional packages on re-init', async () => {
       fs.mkdirSync(path.join(tmpDir, 'docs'));
 
-      await initPublisher(['docs'], {
+      await initPublisher(['docs/**'], {
         workingDir: tmpDir,
         additionalPackages: ['shared-data@^1.0.0'],
       });
-      await initPublisher(['docs'], {
+      await initPublisher(['docs/**'], {
         workingDir: tmpDir,
         additionalPackages: ['shared-data@^1.0.0'],
       });
@@ -260,11 +258,11 @@ describe('Publisher', () => {
     it('should merge additional packages on re-init', async () => {
       fs.mkdirSync(path.join(tmpDir, 'docs'));
 
-      await initPublisher(['docs'], {
+      await initPublisher(['docs/**'], {
         workingDir: tmpDir,
         additionalPackages: ['pkg-a'],
       });
-      await initPublisher(['docs'], {
+      await initPublisher(['docs/**'], {
         workingDir: tmpDir,
         additionalPackages: ['pkg-b'],
       });
@@ -278,7 +276,7 @@ describe('Publisher', () => {
     it('should handle scoped package names in additionalPackages', async () => {
       fs.mkdirSync(path.join(tmpDir, 'docs'));
 
-      await initPublisher(['docs'], {
+      await initPublisher(['docs/**'], {
         workingDir: tmpDir,
         additionalPackages: ['@my-org/shared-data@^2.0.0'],
       });
@@ -292,7 +290,7 @@ describe('Publisher', () => {
     it('should return empty additionalPackages when none specified', async () => {
       fs.mkdirSync(path.join(tmpDir, 'docs'));
 
-      const result = await initPublisher(['docs'], { workingDir: tmpDir });
+      const result = await initPublisher(['docs/**'], { workingDir: tmpDir });
 
       expect(result.success).toBe(true);
       expect(result.additionalPackages).toBeUndefined();
@@ -303,6 +301,36 @@ describe('Publisher', () => {
       expect(entries).toHaveLength(1);
       expect(entries[0].package).toBe(pkgJson.name);
       expect(entries[0].outputDir).toBe('.');
+    });
+
+    it('should set unmanaged: true on all npmdata entries when unmanaged option is true', async () => {
+      fs.mkdirSync(path.join(tmpDir, 'docs'));
+
+      await initPublisher(['docs/**'], {
+        workingDir: tmpDir,
+        additionalPackages: ['other-pkg'],
+        unmanaged: true,
+      });
+
+      const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
+      const entries = pkgJson.npmdata as Array<{ package: string; unmanaged?: boolean }>;
+      // eslint-disable-next-line no-restricted-syntax
+      for (const entry of entries) {
+        expect(entry.unmanaged).toBe(true);
+      }
+    });
+
+    it('should not set unmanaged on entries when unmanaged option is false', async () => {
+      fs.mkdirSync(path.join(tmpDir, 'docs'));
+
+      await initPublisher(['docs/**'], { workingDir: tmpDir, unmanaged: false });
+
+      const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
+      const entries = pkgJson.npmdata as Array<{ package: string; unmanaged?: boolean }>;
+      // eslint-disable-next-line no-restricted-syntax
+      for (const entry of entries) {
+        expect(entry.unmanaged).toBeUndefined();
+      }
     });
   });
 });
