@@ -578,13 +578,22 @@ export function run(binDir: string, argv: string[] = process.argv): void {
   const dryRunFromArgv = parseDryRunFromArgv(userArgs);
   const silentFromArgv = parseSilentFromArgv(userArgs);
 
-  if (action === 'extract') {
-    runExtract(entries, excludedEntries, cliPath, runCwd, dryRunFromArgv, silentFromArgv);
-  } else if (action === 'check') {
-    runCheck(entries, cliPath, runCwd);
-  } else if (action === 'list') {
-    runList(allEntries, cliPath, runCwd);
-  } else if (action === 'purge') {
-    runPurge(entries, cliPath, runCwd, dryRunFromArgv, silentFromArgv);
+  // eslint-disable-next-line functional/no-try-statements
+  try {
+    if (action === 'extract') {
+      runExtract(entries, excludedEntries, cliPath, runCwd, dryRunFromArgv, silentFromArgv);
+    } else if (action === 'check') {
+      runCheck(entries, cliPath, runCwd);
+    } else if (action === 'list') {
+      runList(allEntries, cliPath, runCwd);
+    } else if (action === 'purge') {
+      runPurge(entries, cliPath, runCwd, dryRunFromArgv, silentFromArgv);
+    }
+  } catch (error: unknown) {
+    // The child process already printed the error via stdio:inherit.
+    // Exit with the child's exit code to suppress the Node.js stack trace.
+    const status = (error as { status?: number })?.status;
+    // eslint-disable-next-line unicorn/no-process-exit
+    process.exit(status ?? 1);
   }
 }

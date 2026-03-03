@@ -145,13 +145,31 @@ describe('runner', () => {
       expect(capturedCommand()).toContain('extract');
     });
 
-    it('propagates errors thrown by execSync', () => {
+    it('calls process.exit with child exit code when execSync throws', () => {
+      setupPackageJson({ name: 'my-pkg' });
+      const exitError = Object.assign(new Error('command failed'), { status: 2 });
+      mockExecSync.mockImplementation(() => {
+        throw exitError;
+      });
+      const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('process.exit called');
+      });
+      expect(() => run(BIN_DIR, EXTRACT_ARGV)).toThrow('process.exit called');
+      expect(mockExit).toHaveBeenCalledWith(2);
+      mockExit.mockRestore();
+    });
+
+    it('calls process.exit with 1 when execSync throws without a status code', () => {
       setupPackageJson({ name: 'my-pkg' });
       mockExecSync.mockImplementation(() => {
         throw new Error('command failed');
       });
-
-      expect(() => run(BIN_DIR, EXTRACT_ARGV)).toThrow('command failed');
+      const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('process.exit called');
+      });
+      expect(() => run(BIN_DIR, EXTRACT_ARGV)).toThrow('process.exit called');
+      expect(mockExit).toHaveBeenCalledWith(1);
+      mockExit.mockRestore();
     });
 
     it('uses --output dir as base when resolving outputDir in the extract command', () => {

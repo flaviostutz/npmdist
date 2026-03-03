@@ -14,16 +14,16 @@ test:
 	# install the data package and extract the data
 	make clean
 	make install
-	pnpm exec example-files-package extract --files "docs/**/*,conf/**/*"
+	pnpm exec example-files-package extract --output output
 
 	# fail if a expected extracted file doesn't exist
-	test -e docs/adrs/adr-001-sample1.md
-	test -e conf/globals.js
+	test -e output/docs/adrs/adr-001-sample1.md
+	test -e output/conf/globals.js
 
 	pnpm exec example-files-package extract --tags "basic"
 # 	fail if basic-tagged files are not present, and extra-tagged files are purged
-	test -e docs/adrs/adr-001-sample1.md
-	test ! -e conf/globals.js
+	test -e output/docs/adrs/adr-001-sample1.md
+	test ! -e output/conf/globals.js
 
 clean:
 	@rm -rf node_modules
