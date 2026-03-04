@@ -493,6 +493,34 @@ export function checkContentReplacements(
 
 // ─── Action handlers ───────────────────────────────────────────────────────────
 
+/**
+ * Run a shell command, capturing its stdout while inheriting stderr.
+ * The captured stdout is immediately written to process.stdout so the caller
+ * sees it in real time (well, after the child exits).  Returns the full
+ * captured stdout string and the child's exit code.  Non-zero exit codes do
+ * NOT throw; callers are responsible for checking exitCode.
+ */
+function runCommandCapture(command: string, cwd: string): { stdout: string; exitCode: number } {
+  // eslint-disable-next-line functional/no-try-statements
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+    const stdout =
+      (execSync(command, {
+        encoding: 'utf8',
+        cwd,
+        stdio: ['inherit', 'pipe', 'inherit'],
+      }) as string) ?? '';
+    process.stdout.write(stdout);
+    return { stdout, exitCode: 0 };
+  } catch (error: unknown) {
+    const err = error as { stdout?: string; status?: number };
+    const stdout = err.stdout ?? '';
+    process.stdout.write(stdout);
+    return { stdout, exitCode: err.status ?? 1 };
+  }
+}
+
+// eslint-disable-next-line complexity
 function runExtract(
   entries: NpmdataExtractEntry[],
   excludedEntries: NpmdataExtractEntry[],
@@ -508,11 +536,26 @@ function runExtract(
       `[verbose] extract: processing ${entries.length} entr${entries.length === 1 ? 'y' : 'ies'} (cwd: ${runCwd})`,
     );
   }
+  // eslint-disable-next-line functional/no-let
+  let totalAdded = 0;
+  // eslint-disable-next-line functional/no-let
+  let totalModified = 0;
+  // eslint-disable-next-line functional/no-let
+  let totalDeleted = 0;
+  // eslint-disable-next-line functional/no-let
+  let totalSkipped = 0;
+  // eslint-disable-next-line functional/no-let
+  let entryIndex = 0;
   for (const entry of entries) {
+    const effectiveSilent = entry.silent || silentFromArgv;
+    if (entryIndex > 0 && !effectiveSilent) {
+      process.stdout.write('\n');
+    }
+    entryIndex += 1;
     const effectiveEntry: NpmdataExtractEntry = {
       ...entry,
       dryRun: entry.dryRun || dryRunFromArgv,
-      silent: entry.silent || silentFromArgv,
+      silent: effectiveSilent,
       verbose: entry.verbose || verboseFromArgv,
     };
     if (verboseFromArgv) {
@@ -525,7 +568,19 @@ function runExtract(
       // eslint-disable-next-line no-console
       console.log(`[verbose] extract: running command: ${command}`);
     }
-    execSync(command, { stdio: 'inherit', cwd: runCwd });
+    const { stdout: extractStdout, exitCode: extractExitCode } = runCommandCapture(command, runCwd);
+    if (extractExitCode !== 0) {
+      throw Object.assign(new Error('extract failed'), { status: extractExitCode });
+    }
+    const extractMatch = extractStdout.match(
+      /Extraction complete:\s*(\d+) added,\s*(\d+) modified,\s*(\d+) deleted,\s*(\d+) skipped/,
+    );
+    if (extractMatch) {
+      totalAdded += Number.parseInt(extractMatch[1], 10);
+      totalModified += Number.parseInt(extractMatch[2], 10);
+      totalDeleted += Number.parseInt(extractMatch[3], 10);
+      totalSkipped += Number.parseInt(extractMatch[4], 10);
+    }
     if (!effectiveEntry.dryRun) {
       if (verboseFromArgv) {
         // eslint-disable-next-line no-console
@@ -556,6 +611,12 @@ function runExtract(
     const command = buildPurgeCommand(cliPath, effectiveEntry, runCwd);
     execSync(command, { stdio: 'inherit', cwd: runCwd });
   }
+
+  if (!silentFromArgv && entries.length > 1) {
+    process.stdout.write(
+      `\nTotal extracted: ${totalAdded} added, ${totalModified} modified, ${totalDeleted} deleted, ${totalSkipped} skipped${dryRunFromArgv ? ' (dry run)' : ''}\n`,
+    );
+  }
 }
 
 function runCheck(
@@ -572,7 +633,13 @@ function runCheck(
   }
   // eslint-disable-next-line functional/no-let
   let outOfSyncFiles: string[] = [];
+  // eslint-disable-next-line functional/no-let
+  let checkIndex = 0;
   for (const entry of entries) {
+    if (checkIndex > 0) {
+      process.stdout.write('\n');
+    }
+    checkIndex += 1;
     if (verboseFromArgv) {
       // eslint-disable-next-line no-console
       console.log(
@@ -588,7 +655,10 @@ function runCheck(
       // eslint-disable-next-line no-console
       console.log(`[verbose] check: running command: ${command}`);
     }
-    execSync(command, { stdio: 'inherit', cwd: runCwd });
+    const { exitCode: checkExitCode } = runCommandCapture(command, runCwd);
+    if (checkExitCode !== 0) {
+      throw Object.assign(new Error('check failed'), { status: checkExitCode });
+    }
     if (verboseFromArgv) {
       // eslint-disable-next-line no-console
       console.log(`[verbose] check: checking content replacements for ${entry.package}`);
@@ -602,6 +672,9 @@ function runCheck(
   }
   if (outOfSyncFiles.length > 0) {
     throw Object.assign(new Error('content-replacements out of sync'), { status: 1 });
+  }
+  if (entries.length > 1) {
+    process.stdout.write(`\nTotal checked: ${entries.length} packages\n`);
   }
 }
 
@@ -633,6 +706,7 @@ function runList(
   }
 }
 
+// eslint-disable-next-line complexity
 function runPurge(
   entries: NpmdataExtractEntry[],
   cliPath: string,
@@ -647,11 +721,20 @@ function runPurge(
       `[verbose] purge: processing ${entries.length} entr${entries.length === 1 ? 'y' : 'ies'} (cwd: ${runCwd})`,
     );
   }
+  // eslint-disable-next-line functional/no-let
+  let totalDeleted = 0;
+  // eslint-disable-next-line functional/no-let
+  let purgeIndex = 0;
   for (const entry of entries) {
+    const effectiveSilent = entry.silent || silentFromArgv;
+    if (purgeIndex > 0 && !effectiveSilent) {
+      process.stdout.write('\n');
+    }
+    purgeIndex += 1;
     const effectiveEntry: NpmdataExtractEntry = {
       ...entry,
       dryRun: entry.dryRun || dryRunFromArgv,
-      silent: entry.silent || silentFromArgv,
+      silent: effectiveSilent,
       verbose: entry.verbose || verboseFromArgv,
     };
     if (verboseFromArgv) {
@@ -663,7 +746,14 @@ function runPurge(
       // eslint-disable-next-line no-console
       console.log(`[verbose] purge: running command: ${command}`);
     }
-    execSync(command, { stdio: 'inherit', cwd: runCwd });
+    const { stdout: purgeStdout, exitCode: purgeExitCode } = runCommandCapture(command, runCwd);
+    if (purgeExitCode !== 0) {
+      throw Object.assign(new Error('purge failed'), { status: purgeExitCode });
+    }
+    const purgeMatch = purgeStdout.match(/Purge complete:\s*(\d+) deleted/);
+    if (purgeMatch) {
+      totalDeleted += Number.parseInt(purgeMatch[1], 10);
+    }
     if (!effectiveEntry.dryRun) {
       if (verboseFromArgv) {
         // eslint-disable-next-line no-console
@@ -671,6 +761,9 @@ function runPurge(
       }
       applySymlinks(effectiveEntry, runCwd);
     }
+  }
+  if (!silentFromArgv && entries.length > 1) {
+    process.stdout.write(`\nTotal purged: ${totalDeleted}${dryRunFromArgv ? ' (dry run)' : ''}\n`);
   }
 }
 

@@ -220,7 +220,7 @@ export async function cli(processArgs: string[]): Promise<number> {
       : (event: ProgressEvent): void => {
           switch (event.type) {
             case 'package-start':
-              console.log(`\n>> Package ${event.packageName}`);
+              console.log(`>> Package ${event.packageName}`);
               if (purgeVerbose) {
                 console.log(
                   `[verbose] purge: starting removal of managed files for ${event.packageName}`,
@@ -251,7 +251,7 @@ export async function cli(processArgs: string[]): Promise<number> {
     });
 
     console.log(
-      `\nPurge complete: ${purgeResult.deleted.length} deleted${purgeDryRun ? ' (dry run)' : ''}`,
+      `Purge complete: ${purgeResult.deleted.length} deleted${purgeDryRun ? ' (dry run)' : ''}`,
     );
     return 0;
   }
@@ -349,7 +349,7 @@ export async function cli(processArgs: string[]): Promise<number> {
     : (event: ProgressEvent): void => {
         switch (event.type) {
           case 'package-start':
-            console.log(`\n>> Package ${event.packageName}@${event.packageVersion}`);
+            console.log(`>> Package ${event.packageName}@${event.packageVersion}`);
             if (verbose) {
               console.log(
                 `[verbose] ${command}: starting processing of package ${event.packageName}@${event.packageVersion}`,
@@ -428,14 +428,14 @@ export async function cli(processArgs: string[]): Promise<number> {
       );
     }
     console.log(
-      `\nExtraction complete: ${result.added.length} added, ${result.modified.length} modified, ${result.deleted.length} deleted, ${result.skipped.length} skipped${dryRun ? ' (dry run)' : ''}`,
+      `Extraction complete: ${result.added.length} added, ${result.modified.length} modified, ${result.deleted.length} deleted, ${result.skipped.length} skipped${dryRun ? ' (dry run)' : ''}`,
     );
     return 0;
   }
 
   if (command === 'check') {
     const relDir = path.relative(process.cwd(), config.outputDir) || '.';
-    console.log(`\nChecking data from ${config.packages.join(', ')} against ${relDir}...`);
+    console.log(`Checking data from ${config.packages.join(', ')} against ${relDir}...`);
     if (verbose) {
       console.log(`[verbose] check: resolved output directory: ${config.outputDir}`);
       console.log(`[verbose] check: installing/resolving packages: ${config.packages.join(', ')}`);
@@ -468,11 +468,11 @@ export async function cli(processArgs: string[]): Promise<number> {
     }
 
     if (result.ok) {
-      console.log('\nAll files are in sync');
+      console.log('All files are in sync');
       return 0;
     }
 
-    console.log('\nFiles are out of sync');
+    console.log('Files are out of sync');
     return 2;
   }
 

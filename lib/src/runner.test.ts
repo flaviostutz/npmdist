@@ -93,15 +93,15 @@ describe('runner', () => {
       expect(mockExecSync).toHaveBeenCalledTimes(2);
     });
 
-    it('passes stdio:inherit and cwd to execSync', () => {
+    it('passes cwd to execSync when running extract', () => {
       setupPackageJson({ name: 'my-pkg' });
 
       run(BIN_DIR, EXTRACT_ARGV);
 
-      expect(mockExecSync).toHaveBeenCalledWith(expect.any(String), {
-        stdio: 'inherit',
-        cwd: expect.any(String),
-      });
+      expect(mockExecSync).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ cwd: expect.any(String) }),
+      );
     });
 
     it('passes the current working directory as cwd to execSync', () => {
@@ -2171,6 +2171,178 @@ describe('runner', () => {
 
       const outOfSync = checkContentReplacements(entry, tmpDir);
       expect(outOfSync).not.toContain(filePath);
+    });
+  });
+
+  describe('run – output formatting: blank lines and totals', () => {
+    it('writes a blank line between entries for extract', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [
+          { package: 'pkg-a', outputDir: './a' },
+          { package: 'pkg-b', outputDir: './b' },
+        ],
+      });
+      const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+      run(BIN_DIR, EXTRACT_ARGV);
+
+      const written = stdoutSpy.mock.calls.map((c) => c[0] as string);
+      expect(written).toContain('\n');
+      stdoutSpy.mockRestore();
+    });
+
+    it('writes "Total extracted" after multiple extract entries', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [
+          { package: 'pkg-a', outputDir: './a' },
+          { package: 'pkg-b', outputDir: './b' },
+        ],
+      });
+      mockExecSync.mockReturnValue(
+        'Extraction complete: 2 added, 0 modified, 0 deleted, 0 skipped',
+      );
+      const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+      run(BIN_DIR, EXTRACT_ARGV);
+
+      const allOutput = stdoutSpy.mock.calls.map((c) => c[0] as string).join('');
+      expect(allOutput).toContain('Total extracted: 4 added, 0 modified, 0 deleted, 0 skipped');
+      stdoutSpy.mockRestore();
+    });
+
+    it('does not write "Total extracted" for a single extract entry', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [{ package: 'pkg-a', outputDir: './a' }],
+      });
+      mockExecSync.mockReturnValue(
+        'Extraction complete: 2 added, 0 modified, 0 deleted, 0 skipped',
+      );
+      const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+      run(BIN_DIR, EXTRACT_ARGV);
+
+      const allOutput = stdoutSpy.mock.calls.map((c) => c[0] as string).join('');
+      expect(allOutput).not.toContain('Total extracted:');
+      stdoutSpy.mockRestore();
+    });
+
+    it('writes a blank line between entries for purge', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [
+          { package: 'pkg-a', outputDir: './a' },
+          { package: 'pkg-b', outputDir: './b' },
+        ],
+      });
+      const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+      run(BIN_DIR, ['node', 'script.js', 'purge']);
+
+      const written = stdoutSpy.mock.calls.map((c) => c[0] as string);
+      expect(written).toContain('\n');
+      stdoutSpy.mockRestore();
+    });
+
+    it('writes "Total purged" accumulating counts from multiple purge entries', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [
+          { package: 'pkg-a', outputDir: './a' },
+          { package: 'pkg-b', outputDir: './b' },
+        ],
+      });
+      mockExecSync.mockReturnValue('Purge complete: 3 deleted');
+      const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+      run(BIN_DIR, ['node', 'script.js', 'purge']);
+
+      const allOutput = stdoutSpy.mock.calls.map((c) => c[0] as string).join('');
+      expect(allOutput).toContain('Total purged: 6');
+      stdoutSpy.mockRestore();
+    });
+
+    it('does not write "Total purged" for a single purge entry', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [{ package: 'pkg-a', outputDir: './a' }],
+      });
+      mockExecSync.mockReturnValue('Purge complete: 3 deleted');
+      const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+      run(BIN_DIR, ['node', 'script.js', 'purge']);
+
+      const allOutput = stdoutSpy.mock.calls.map((c) => c[0] as string).join('');
+      expect(allOutput).not.toContain('Total purged:');
+      stdoutSpy.mockRestore();
+    });
+
+    it('does not write "Total purged" when --silent is set', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [
+          { package: 'pkg-a', outputDir: './a' },
+          { package: 'pkg-b', outputDir: './b' },
+        ],
+      });
+      mockExecSync.mockReturnValue('Purge complete: 3 deleted');
+      const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+      run(BIN_DIR, ['node', 'script.js', 'purge', '--silent']);
+
+      const allOutput = stdoutSpy.mock.calls.map((c) => c[0] as string).join('');
+      expect(allOutput).not.toContain('Total purged:');
+      stdoutSpy.mockRestore();
+    });
+
+    it('writes a blank line between entries for check', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [
+          { package: 'pkg-a', outputDir: './a' },
+          { package: 'pkg-b', outputDir: './b' },
+        ],
+      });
+      const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+      run(BIN_DIR, ['node', 'script.js', 'check']);
+
+      const written = stdoutSpy.mock.calls.map((c) => c[0] as string);
+      expect(written).toContain('\n');
+      stdoutSpy.mockRestore();
+    });
+
+    it('writes "Total checked" after multiple check entries', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [
+          { package: 'pkg-a', outputDir: './a' },
+          { package: 'pkg-b', outputDir: './b' },
+        ],
+      });
+      const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+      run(BIN_DIR, ['node', 'script.js', 'check']);
+
+      const allOutput = stdoutSpy.mock.calls.map((c) => c[0] as string).join('');
+      expect(allOutput).toContain('Total checked: 2 packages');
+      stdoutSpy.mockRestore();
+    });
+
+    it('does not write "Total checked" for a single check entry', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: [{ package: 'pkg-a', outputDir: './a' }],
+      });
+      const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+      run(BIN_DIR, ['node', 'script.js', 'check']);
+
+      const allOutput = stdoutSpy.mock.calls.map((c) => c[0] as string).join('');
+      expect(allOutput).not.toContain('Total checked:');
+      stdoutSpy.mockRestore();
     });
   });
 });
