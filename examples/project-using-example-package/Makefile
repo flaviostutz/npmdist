@@ -37,6 +37,8 @@ test:
 	test ! -e output/.configs/app.config.json
 	test ! -e output/docs/adrs/adr-001-sample1.md
 
+	pnpm exec example-files-package --tags "basic" --output output
+
 clean:
 	@rm -rf node_modules
 	@rm -rf output

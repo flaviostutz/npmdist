@@ -1,5 +1,12 @@
 // Main exports
-export { extract, check, list, purge } from './consumer';
+export {
+  extract,
+  check,
+  list,
+  purge,
+  findNearestMarkerPath,
+  compressGitignoreEntries,
+} from './consumer';
 export type { PurgeConfig } from './consumer';
 export { initPublisher } from './publisher';
 

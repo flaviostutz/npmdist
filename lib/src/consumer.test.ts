@@ -6,7 +6,7 @@ import { execSync } from 'node:child_process';
 
 import archiver from 'archiver';
 
-import { extract, check, list, purge } from './consumer';
+import { extract, check, list, purge, compressGitignoreEntries } from './consumer';
 import { readCsvMarker } from './utils';
 
 describe('Consumer', () => {
@@ -55,12 +55,8 @@ describe('Consumer', () => {
 
       const rootMarker = readCsvMarker(path.join(outputDir, '.npmdata'));
       expect(rootMarker.some((m) => m.packageName === 'test-extract-package')).toBe(true);
-
-      const docsMarker = readCsvMarker(path.join(outputDir, 'docs', '.npmdata'));
-      expect(docsMarker[0].packageName).toBe('test-extract-package');
-
-      const srcMarker = readCsvMarker(path.join(outputDir, 'src', '.npmdata'));
-      expect(srcMarker[0].packageName).toBe('test-extract-package');
+      expect(rootMarker.some((m) => m.path === 'docs/guide.md')).toBe(true);
+      expect(rootMarker.some((m) => m.path === 'src/index.ts')).toBe(true);
     });
 
     it('should mark extracted files as read-only', async () => {
@@ -512,8 +508,8 @@ describe('Consumer', () => {
         cwd: tmpDir,
       });
 
-      const markerBefore = readCsvMarker(path.join(outputDir, 'docs', '.npmdata'));
-      expect(markerBefore.some((m) => m.path === 'file2.md')).toBe(true);
+      const markerBefore = readCsvMarker(path.join(outputDir, '.npmdata'));
+      expect(markerBefore.some((m) => m.path === 'docs/file2.md')).toBe(true);
 
       // Reinstall package with file2 removed
       await installMockPackage('test-delete-meta-package', { 'docs/file1.md': '# File 1' }, tmpDir);
@@ -531,10 +527,10 @@ describe('Consumer', () => {
       expect(fs.existsSync(path.join(outputDir, 'docs', 'file2.md'))).toBe(false);
 
       // metadata must no longer reference file2
-      const markerAfter = readCsvMarker(path.join(outputDir, 'docs', '.npmdata'));
-      expect(markerAfter.some((m) => m.path === 'file2.md')).toBe(false);
+      const markerAfter = readCsvMarker(path.join(outputDir, '.npmdata'));
+      expect(markerAfter.some((m) => m.path === 'docs/file2.md')).toBe(false);
       // file1 must still be tracked
-      expect(markerAfter.some((m) => m.path === 'file1.md')).toBe(true);
+      expect(markerAfter.some((m) => m.path === 'docs/file1.md')).toBe(true);
     });
 
     it('should delete marker files and empty directories when all managed files are removed', async () => {
@@ -558,7 +554,7 @@ describe('Consumer', () => {
       });
 
       expect(fs.existsSync(path.join(outputDir, 'docs', 'guide.md'))).toBe(true);
-      expect(fs.existsSync(path.join(outputDir, 'docs', '.npmdata'))).toBe(true);
+      expect(fs.existsSync(path.join(outputDir, '.npmdata'))).toBe(true);
 
       // Reinstall with an empty package (all files removed from the data package)
       await installMockPackage('test-full-cleanup-package', {}, tmpDir);
@@ -575,8 +571,8 @@ describe('Consumer', () => {
       expect(fs.existsSync(path.join(outputDir, 'docs', 'guide.md'))).toBe(false);
       expect(fs.existsSync(path.join(outputDir, 'docs', 'api.md'))).toBe(false);
 
-      // Marker file must be removed because the directory has no managed files left
-      expect(fs.existsSync(path.join(outputDir, 'docs', '.npmdata'))).toBe(false);
+      // Root marker must be removed because there are no managed files left
+      expect(fs.existsSync(path.join(outputDir, '.npmdata'))).toBe(false);
 
       // Directory itself must be removed because it is now empty
       expect(fs.existsSync(path.join(outputDir, 'docs'))).toBe(false);
@@ -603,7 +599,7 @@ describe('Consumer', () => {
       const unmanagedFile = path.join(outputDir, 'docs', 'unmanaged.md');
       fs.writeFileSync(unmanagedFile, '# Unmanaged');
 
-      expect(fs.existsSync(path.join(outputDir, 'docs', '.npmdata'))).toBe(true);
+      expect(fs.existsSync(path.join(outputDir, '.npmdata'))).toBe(true);
 
       // Reinstall with an empty package (managed file dropped)
       await installMockPackage('test-unmanaged-coexist-package', {}, tmpDir);
@@ -619,8 +615,8 @@ describe('Consumer', () => {
       expect(result.deleted).toHaveLength(1);
       expect(fs.existsSync(path.join(outputDir, 'docs', 'managed.md'))).toBe(false);
 
-      // Marker file must be removed because no managed files remain in this directory
-      expect(fs.existsSync(path.join(outputDir, 'docs', '.npmdata'))).toBe(false);
+      // Root marker must be removed because no managed files remain
+      expect(fs.existsSync(path.join(outputDir, '.npmdata'))).toBe(false);
 
       // Unmanaged file and directory must still exist
       expect(fs.existsSync(unmanagedFile)).toBe(true);
@@ -649,18 +645,19 @@ describe('Consumer', () => {
         filenamePatterns: ['**'],
       });
 
-      // Root .gitignore should contain .npmdata and the managed file
+      // Root .gitignore should contain .npmdata and the root-level README.md;
+      // docs/ is fully managed so it appears as a directory pattern, not individual files.
       const rootGitignore = fs.readFileSync(path.join(outputDir, '.gitignore'), 'utf8');
       expect(rootGitignore).toContain('.npmdata');
       expect(rootGitignore).toContain('README.md');
+      expect(rootGitignore).toContain('docs/');
+      expect(rootGitignore).not.toContain('docs/guide.md');
+      expect(rootGitignore).not.toContain('docs/api.md');
       expect(rootGitignore).toContain('# npmdata:start');
       expect(rootGitignore).toContain('# npmdata:end');
 
-      // docs/.gitignore should contain .npmdata and both managed docs files
-      const docsGitignore = fs.readFileSync(path.join(outputDir, 'docs', '.gitignore'), 'utf8');
-      expect(docsGitignore).toContain('.npmdata');
-      expect(docsGitignore).toContain('guide.md');
-      expect(docsGitignore).toContain('api.md');
+      // docs/ must NOT have its own .gitignore (consolidated to root)
+      expect(fs.existsSync(path.join(outputDir, 'docs', '.gitignore'))).toBe(false);
     });
 
     it('should not create .gitignore when gitignore option is false', async () => {
@@ -779,9 +776,11 @@ describe('Consumer', () => {
         filenamePatterns: ['**'],
       });
 
-      const before = fs.readFileSync(path.join(outputDir, 'docs', '.gitignore'), 'utf8');
-      expect(before).toContain('guide.md');
-      expect(before).toContain('api.md');
+      // Both docs files are managed → entire docs/ dir is compressed to a single pattern
+      const before = fs.readFileSync(path.join(outputDir, '.gitignore'), 'utf8');
+      expect(before).toContain('docs/');
+      expect(before).not.toContain('docs/guide.md');
+      expect(before).not.toContain('docs/api.md');
 
       // Reinstall package with only one file
       await installMockPackage(
@@ -799,9 +798,39 @@ describe('Consumer', () => {
         filenamePatterns: ['**'],
       });
 
-      const after = fs.readFileSync(path.join(outputDir, 'docs', '.gitignore'), 'utf8');
-      expect(after).toContain('guide.md');
-      expect(after).not.toContain('api.md');
+      // docs/ still has only the managed guide.md → still compressed to docs/
+      const after = fs.readFileSync(path.join(outputDir, '.gitignore'), 'utf8');
+      expect(after).toContain('docs/');
+      expect(after).not.toContain('docs/api.md');
+    });
+
+    it('should list individual files in .gitignore when a directory has unmanaged files alongside managed ones', async () => {
+      const outputDir = path.join(tmpDir, 'output');
+      fs.mkdirSync(path.join(outputDir, 'docs'), { recursive: true });
+
+      // Place an unmanaged file in docs/ before extraction
+      fs.writeFileSync(path.join(outputDir, 'docs', 'unmanaged.md'), '# Unmanaged');
+
+      await installMockPackage(
+        'test-partial-dir-gitignore-package',
+        { 'docs/guide.md': '# Guide', 'docs/api.md': '# API' },
+        tmpDir,
+      );
+
+      await extract({
+        packages: ['test-partial-dir-gitignore-package'],
+        outputDir,
+        packageManager: 'pnpm',
+        cwd: tmpDir,
+        gitignore: true,
+        filenamePatterns: ['**'],
+      });
+
+      const gitignore = fs.readFileSync(path.join(outputDir, '.gitignore'), 'utf8');
+      // docs/ contains an unmanaged file — cannot be collapsed to a directory pattern
+      expect(gitignore).not.toMatch(/^docs\/$/m);
+      expect(gitignore).toContain('docs/guide.md');
+      expect(gitignore).toContain('docs/api.md');
     });
 
     it('should remove .gitignore entries for deleted files even when gitignore option is not set', async () => {
@@ -872,14 +901,14 @@ describe('Consumer', () => {
       expect(fs.existsSync(path.join(outputDir, 'docs', 'a-guide.md'))).toBe(true);
       expect(fs.existsSync(path.join(outputDir, 'docs', 'b-guide.md'))).toBe(true);
 
-      // The docs/.npmdata marker must carry entries for both packages
-      const marker = readCsvMarker(path.join(outputDir, 'docs', '.npmdata'));
-      expect(marker.some((m) => m.packageName === 'pkg-coexist-a' && m.path === 'a-guide.md')).toBe(
-        true,
-      );
-      expect(marker.some((m) => m.packageName === 'pkg-coexist-b' && m.path === 'b-guide.md')).toBe(
-        true,
-      );
+      // The root .npmdata marker must carry entries for both packages with full relPaths
+      const marker = readCsvMarker(path.join(outputDir, '.npmdata'));
+      expect(
+        marker.some((m) => m.packageName === 'pkg-coexist-a' && m.path === 'docs/a-guide.md'),
+      ).toBe(true);
+      expect(
+        marker.some((m) => m.packageName === 'pkg-coexist-b' && m.path === 'docs/b-guide.md'),
+      ).toBe(true);
     });
 
     it('should not remove files managed by another package when re-extracting', async () => {
@@ -914,9 +943,9 @@ describe('Consumer', () => {
       expect(fs.existsSync(path.join(outputDir, 'docs', 'a-file.md'))).toBe(true);
 
       // Package-a's marker entry must still be present
-      const marker = readCsvMarker(path.join(outputDir, 'docs', '.npmdata'));
+      const marker = readCsvMarker(path.join(outputDir, '.npmdata'));
       expect(
-        marker.some((m) => m.packageName === 'pkg-reextract-a' && m.path === 'a-file.md'),
+        marker.some((m) => m.packageName === 'pkg-reextract-a' && m.path === 'docs/a-file.md'),
       ).toBe(true);
     });
 
@@ -947,11 +976,11 @@ describe('Consumer', () => {
       expect(fs.existsSync(path.join(outputDir, 'docs', 'b-keep.md'))).toBe(true);
 
       // Marker must only contain package-b's entry
-      const marker = readCsvMarker(path.join(outputDir, 'docs', '.npmdata'));
+      const marker = readCsvMarker(path.join(outputDir, '.npmdata'));
       expect(marker.some((m) => m.packageName === 'pkg-drop-a')).toBe(false);
-      expect(marker.some((m) => m.packageName === 'pkg-drop-b' && m.path === 'b-keep.md')).toBe(
-        true,
-      );
+      expect(
+        marker.some((m) => m.packageName === 'pkg-drop-b' && m.path === 'docs/b-keep.md'),
+      ).toBe(true);
     });
 
     it('should correctly delete a same-named file in a different directory when that directory entry is removed from the package', async () => {
@@ -1037,7 +1066,7 @@ describe('Consumer', () => {
         cwd: tmpDir,
       });
 
-      const markerBefore = readCsvMarker(path.join(outputDir, 'docs', '.npmdata'));
+      const markerBefore = readCsvMarker(path.join(outputDir, '.npmdata'));
       expect(markerBefore.some((m) => m.packageName === 'pkg-force-owner-a')).toBe(true);
 
       // Second extraction with force: pkg-force-owner-b should take ownership
@@ -1057,7 +1086,7 @@ describe('Consumer', () => {
       expect(result.modified).toContain('docs/shared.md');
 
       // Marker must show pkg-force-owner-b as the sole owner; pkg-force-owner-a evicted
-      const markerAfter = readCsvMarker(path.join(outputDir, 'docs', '.npmdata'));
+      const markerAfter = readCsvMarker(path.join(outputDir, '.npmdata'));
       expect(markerAfter.some((m) => m.packageName === 'pkg-force-owner-b')).toBe(true);
       expect(markerAfter.some((m) => m.packageName === 'pkg-force-owner-a')).toBe(false);
     });
@@ -1091,8 +1120,10 @@ describe('Consumer', () => {
       const content = fs.readFileSync(path.join(outputDir, 'data', 'record.json'), 'utf8');
       expect(content).toBe('{"owner":"a"}');
 
-      const marker = readCsvMarker(path.join(outputDir, 'data', '.npmdata'));
-      expect(marker.some((m) => m.packageName === 'pkg-no-force-a')).toBe(true);
+      const marker = readCsvMarker(path.join(outputDir, '.npmdata'));
+      expect(
+        marker.some((m) => m.packageName === 'pkg-no-force-a' && m.path === 'data/record.json'),
+      ).toBe(true);
       expect(marker.some((m) => m.packageName === 'pkg-no-force-b')).toBe(false);
     });
 
@@ -1126,9 +1157,11 @@ describe('Consumer', () => {
       expect(fs.existsSync(path.join(outputDir, 'docs', 'guide.md'))).toBe(true);
       expect(result.added).toContain('docs/guide.md');
 
-      // Marker must record the bare package name (no version suffix)
-      const marker = readCsvMarker(path.join(outputDir, 'docs', '.npmdata'));
-      expect(marker[0].packageName).toBe('pkg-no-version-spec');
+      // Marker must record the bare package name (no version suffix) with full relPath
+      const marker = readCsvMarker(path.join(outputDir, '.npmdata'));
+      expect(
+        marker.some((m) => m.packageName === 'pkg-no-version-spec' && m.path === 'docs/guide.md'),
+      ).toBe(true);
     });
 
     it('should extract successfully when package name includes a satisfied version constraint', async () => {
@@ -1147,9 +1180,11 @@ describe('Consumer', () => {
       expect(fs.existsSync(path.join(outputDir, 'docs', 'guide.md'))).toBe(true);
       expect(result.added).toContain('docs/guide.md');
 
-      // Marker must record the bare package name, not the full spec with version suffix
-      const marker = readCsvMarker(path.join(outputDir, 'docs', '.npmdata'));
-      expect(marker[0].packageName).toBe('pkg-with-version-spec');
+      // Marker must record the bare package name (not the full spec) with full relPath
+      const marker = readCsvMarker(path.join(outputDir, '.npmdata'));
+      expect(
+        marker.some((m) => m.packageName === 'pkg-with-version-spec' && m.path === 'docs/guide.md'),
+      ).toBe(true);
     });
 
     it('should report modified files when package content changes on re-extraction', async () => {
@@ -1975,8 +2010,8 @@ describe('Consumer', () => {
 
       await purge({ packages: ['test-purge-marker'], outputDir });
 
-      // .npmdata marker should be removed when no managed files remain
-      expect(fs.existsSync(path.join(outputDir, 'docs', '.npmdata'))).toBe(false);
+      // root .npmdata marker must be removed when no managed files remain
+      expect(fs.existsSync(path.join(outputDir, '.npmdata'))).toBe(false);
     });
 
     it('should keep managed files belonging to other packages', async () => {
@@ -2110,6 +2145,89 @@ describe('Consumer', () => {
     });
   });
 }); // end describe('Consumer')
+
+describe('compressGitignoreEntries', () => {
+  // eslint-disable-next-line functional/no-let
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'compress-gitignore-test-'));
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(tmpDir)) {
+      fs.rmSync(tmpDir, { recursive: true });
+    }
+  });
+
+  it('should return root-level files unchanged', () => {
+    fs.writeFileSync(path.join(tmpDir, 'README.md'), '# readme');
+    fs.writeFileSync(path.join(tmpDir, 'data.json'), '{}');
+    const result = compressGitignoreEntries(['README.md', 'data.json'], tmpDir);
+    expect(result).toContain('README.md');
+    expect(result).toContain('data.json');
+  });
+
+  it('should collapse a fully-managed directory to dir/', () => {
+    fs.mkdirSync(path.join(tmpDir, 'docs'));
+    fs.writeFileSync(path.join(tmpDir, 'docs', 'guide.md'), '# guide');
+    fs.writeFileSync(path.join(tmpDir, 'docs', 'api.md'), '# api');
+    const result = compressGitignoreEntries(['docs/guide.md', 'docs/api.md'], tmpDir);
+    expect(result).toContain('docs/');
+    expect(result).not.toContain('docs/guide.md');
+    expect(result).not.toContain('docs/api.md');
+  });
+
+  it('should not collapse a directory that has unmanaged files on disk', () => {
+    fs.mkdirSync(path.join(tmpDir, 'docs'));
+    fs.writeFileSync(path.join(tmpDir, 'docs', 'guide.md'), '# guide');
+    fs.writeFileSync(path.join(tmpDir, 'docs', 'api.md'), '# api');
+    fs.writeFileSync(path.join(tmpDir, 'docs', 'manual.md'), '# unmanaged');
+    const result = compressGitignoreEntries(['docs/guide.md', 'docs/api.md'], tmpDir);
+    expect(result).not.toContain('docs/');
+    expect(result).toContain('docs/guide.md');
+    expect(result).toContain('docs/api.md');
+  });
+
+  it('should collapse only the fully-managed subdirectory, not the parent', () => {
+    fs.mkdirSync(path.join(tmpDir, 'src', 'utils'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, 'src', 'main.ts'), '');
+    fs.writeFileSync(path.join(tmpDir, 'src', 'extra.ts'), ''); // unmanaged
+    fs.writeFileSync(path.join(tmpDir, 'src', 'utils', 'helper.ts'), '');
+    const result = compressGitignoreEntries(['src/main.ts', 'src/utils/helper.ts'], tmpDir);
+    expect(result).not.toContain('src/');
+    expect(result).toContain('src/main.ts');
+    expect(result).toContain('src/utils/');
+    expect(result).not.toContain('src/utils/helper.ts');
+  });
+
+  it('should ignore MARKER_FILE and GITIGNORE_FILE when assessing full coverage', () => {
+    fs.mkdirSync(path.join(tmpDir, 'docs'));
+    fs.writeFileSync(path.join(tmpDir, 'docs', 'guide.md'), '# guide');
+    fs.writeFileSync(path.join(tmpDir, 'docs', '.npmdata'), 'guide.md|pkg|1.0.0|0');
+    fs.writeFileSync(
+      path.join(tmpDir, 'docs', '.gitignore'),
+      '# npmdata:start\n.npmdata\nguide.md\n# npmdata:end\n',
+    );
+    const result = compressGitignoreEntries(['docs/guide.md'], tmpDir);
+    expect(result).toContain('docs/');
+    expect(result).not.toContain('docs/guide.md');
+  });
+
+  it('should return an empty array for empty input', () => {
+    const result = compressGitignoreEntries([], tmpDir);
+    expect(result).toHaveLength(0);
+  });
+
+  it('should collapse nested directories when all their contents are managed', () => {
+    fs.mkdirSync(path.join(tmpDir, 'a', 'b', 'c'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, 'a', 'b', 'c', 'file.md'), '');
+    const result = compressGitignoreEntries(['a/b/c/file.md'], tmpDir);
+    expect(result).toContain('a/');
+    expect(result).not.toContain('a/b/');
+    expect(result).not.toContain('a/b/c/');
+  });
+});
 
 const installMockPackage = async (
   packageName: string,

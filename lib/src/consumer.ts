@@ -93,45 +93,135 @@ function updateGitignoreForDir(dir: string, managedFilenames: string[], addEntri
 }
 
 /**
- * Walk outputDir and update .gitignore files for every directory that has a
- * .npmdata marker (to reflect its current managed files) and also clean up
- * any npmdata sections in directories where the marker was removed.
+ * Optimise the list of managed file paths for use in .gitignore.
+ * When every file inside a directory (recursively, excluding MARKER_FILE, GITIGNORE_FILE, and
+ * symlinks) is present in managedPaths, the whole directory is represented as "dir/" rather than
+ * listing each file individually.  Root-level files (no slash) are always emitted as-is.
+ *
+ * @param managedPaths - Paths relative to outputDir (e.g. ["docs/guide.md", "README.md"])
+ * @param outputDir    - Absolute path to the root used to inspect actual disk contents
+ */
+export function compressGitignoreEntries(managedPaths: string[], outputDir: string): string[] {
+  const managedSet = new Set(managedPaths);
+
+  // Returns true when every non-special, non-symlink file inside absDir (recursively)
+  // appears in managedSet under its full outputDir-relative path (relDir prefix included).
+  const isDirFullyManaged = (absDir: string, relDir: string): boolean => {
+    if (!fs.existsSync(absDir)) return false;
+    for (const entry of fs.readdirSync(absDir)) {
+      if (entry === MARKER_FILE || entry === GITIGNORE_FILE) continue;
+      const absEntry = path.join(absDir, entry);
+      const relEntry = `${relDir}/${entry}`;
+      const lstat = fs.lstatSync(absEntry);
+      if (lstat.isSymbolicLink()) continue;
+      if (lstat.isDirectory()) {
+        if (!isDirFullyManaged(absEntry, relEntry)) return false;
+      } else if (!managedSet.has(relEntry)) return false;
+    }
+    return true;
+  };
+
+  // paths: managed paths relative to the current directory scope
+  // absRoot: absolute path of the current directory scope
+  // relRoot: path of the current scope relative to outputDir (empty string at top level)
+  const compress = (paths: string[], absRoot: string, relRoot: string): string[] => {
+    const result: string[] = [];
+    const subdirNames = new Set<string>();
+
+    for (const p of paths) {
+      const slashIdx = p.indexOf('/');
+      if (slashIdx === -1) {
+        // File lives directly in this scope — emit its full outputDir-relative path
+        result.push(relRoot ? `${relRoot}/${p}` : p);
+      } else {
+        subdirNames.add(p.slice(0, slashIdx));
+      }
+    }
+
+    for (const dirName of subdirNames) {
+      const absDir = path.join(absRoot, dirName);
+      const relDir = relRoot ? `${relRoot}/${dirName}` : dirName;
+      const prefix = `${dirName}/`;
+      const subPaths = paths.filter((p) => p.startsWith(prefix)).map((p) => p.slice(prefix.length));
+
+      if (isDirFullyManaged(absDir, relDir)) {
+        result.push(`${relDir}/`);
+      } else {
+        result.push(...compress(subPaths, absDir, relDir));
+      }
+    }
+
+    return result;
+  };
+
+  return compress(managedPaths, outputDir, '');
+}
+
+/**
+ * Find the nearest .npmdata marker file by walking up from fromDir to outputDir (inclusive).
+ * Returns the path to the marker file, or null if none found within the outputDir boundary.
+ */
+export function findNearestMarkerPath(fromDir: string, outputDir: string): string | null {
+  let dir = fromDir;
+  const resolvedOutput = path.resolve(outputDir);
+
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const markerPath = path.join(dir, MARKER_FILE);
+    if (fs.existsSync(markerPath)) return markerPath;
+
+    if (path.resolve(dir) === resolvedOutput) break;
+
+    const parent = path.dirname(dir);
+    if (parent === dir) break; // reached filesystem root
+    dir = parent;
+  }
+
+  // eslint-disable-next-line unicorn/no-null
+  return null;
+}
+
+/**
+ * Write one .gitignore at outputDir containing all managed file paths (relative to outputDir),
+ * and remove any npmdata sections from .gitignore files in subdirectories.
  * When addEntries is false, existing sections are updated/removed but no new
  * sections are created — use this to clean up without opting into gitignore management.
  */
 function updateGitignores(outputDir: string, addEntries = true): void {
   if (!fs.existsSync(outputDir)) return;
 
-  const walkDir = (dir: string): void => {
-    const markerPath = path.join(dir, MARKER_FILE);
-    const gitignorePath = path.join(dir, GITIGNORE_FILE);
-
-    if (fs.existsSync(markerPath)) {
-      try {
-        const managedFiles = readCsvMarker(markerPath);
-        updateGitignoreForDir(
-          dir,
-          managedFiles.map((m) => m.path),
-          addEntries,
-        );
-      } catch {
-        // Ignore unreadable marker files
-      }
-    } else if (fs.existsSync(gitignorePath)) {
-      // Clean up any leftover npmdata section
-      updateGitignoreForDir(dir, [], addEntries);
-    }
-
+  // Remove npmdata sections from all subdirectory .gitignore files (migration / cleanup of old format)
+  const cleanupSubDirGitignores = (dir: string): void => {
     for (const item of fs.readdirSync(dir)) {
       const fullPath = path.join(dir, item);
       const lstat = fs.lstatSync(fullPath);
       if (!lstat.isSymbolicLink() && lstat.isDirectory()) {
-        walkDir(fullPath);
+        const subGitignore = path.join(fullPath, GITIGNORE_FILE);
+        if (fs.existsSync(subGitignore)) {
+          updateGitignoreForDir(fullPath, [], false);
+        }
+        cleanupSubDirGitignores(fullPath);
       }
     }
   };
 
-  walkDir(outputDir);
+  cleanupSubDirGitignores(outputDir);
+
+  // Update (or remove) the single .gitignore at outputDir
+  const rootMarkerPath = path.join(outputDir, MARKER_FILE);
+  if (fs.existsSync(rootMarkerPath)) {
+    try {
+      const managedFiles = readCsvMarker(rootMarkerPath);
+      const rawPaths = managedFiles.map((m) => m.path);
+      const optimisedPaths = compressGitignoreEntries(rawPaths, outputDir);
+      updateGitignoreForDir(outputDir, optimisedPaths, addEntries);
+    } catch {
+      // Ignore unreadable marker files
+    }
+  } else {
+    // Clean up any leftover npmdata section at root
+    updateGitignoreForDir(outputDir, [], false);
+  }
 }
 
 async function getPackageFiles(
@@ -235,43 +325,22 @@ async function ensurePackageInstalled(
 }
 
 /**
- * Load all managed files from marker files under outputDir as a flat list.
- * Paths are relative to outputDir.
+ * Load all managed files from the root marker file at outputDir.
+ * Paths stored in the marker are already relative to outputDir.
+ * Uses findNearestMarkerPath starting from outputDir itself.
  */
 function loadAllManagedFiles(outputDir: string): ManagedFileMetadata[] {
-  const files: ManagedFileMetadata[] = [];
+  if (!fs.existsSync(outputDir)) return [];
 
-  const walkDir = (dir: string): void => {
-    if (!fs.existsSync(dir)) return;
+  const markerPath = findNearestMarkerPath(outputDir, outputDir);
+  if (!markerPath) return [];
 
-    for (const item of fs.readdirSync(dir)) {
-      const fullPath = path.join(dir, item);
-      const stat = fs.lstatSync(fullPath);
-      if (stat.isSymbolicLink()) continue;
-
-      if (item === MARKER_FILE) {
-        try {
-          const managedFiles = readCsvMarker(fullPath);
-          const markerDir = path.dirname(fullPath);
-          const relMarkerDir = path.relative(outputDir, markerDir);
-
-          for (const managed of managedFiles) {
-            const relPath =
-              relMarkerDir === '.' ? managed.path : path.join(relMarkerDir, managed.path);
-            files.push({ ...managed, path: relPath });
-          }
-        } catch {
-          console.warn(`Warning: Failed to read marker file at ${fullPath}. Skipping.`); // eslint-disable-line no-console
-          // Ignore unreadable marker files
-        }
-      } else if (stat.isDirectory()) {
-        walkDir(fullPath);
-      }
-    }
-  };
-
-  walkDir(outputDir);
-  return files;
+  try {
+    return readCsvMarker(markerPath);
+  } catch {
+    console.warn(`Warning: Failed to read marker file at ${markerPath}. Skipping.`); // eslint-disable-line no-console
+    return [];
+  }
 }
 
 /**
@@ -283,32 +352,20 @@ function loadManagedFilesMap(outputDir: string): Map<string, ManagedFileMetadata
 }
 
 function cleanupEmptyMarkers(outputDir: string): void {
-  const walkDir = (dir: string): void => {
-    if (!fs.existsSync(dir)) return;
+  if (!fs.existsSync(outputDir)) return;
 
-    for (const file of fs.readdirSync(dir)) {
-      const fullPath = path.join(dir, file);
+  const markerPath = path.join(outputDir, MARKER_FILE);
+  if (!fs.existsSync(markerPath)) return;
 
-      if (file === MARKER_FILE) {
-        try {
-          const managedFiles = readCsvMarker(fullPath);
-          if (managedFiles.length === 0) {
-            fs.chmodSync(fullPath, 0o644);
-            fs.unlinkSync(fullPath);
-          }
-        } catch {
-          // Ignore unreadable marker files
-        }
-      } else {
-        const lstat = fs.lstatSync(fullPath);
-        if (!lstat.isSymbolicLink() && lstat.isDirectory()) {
-          walkDir(fullPath);
-        }
-      }
+  try {
+    const managedFiles = readCsvMarker(markerPath);
+    if (managedFiles.length === 0) {
+      fs.chmodSync(markerPath, 0o644);
+      fs.unlinkSync(markerPath);
     }
-  };
-
-  walkDir(outputDir);
+  } catch {
+    // Ignore unreadable marker files
+  }
 }
 
 function cleanupEmptyDirs(outputDir: string): void {
@@ -360,12 +417,11 @@ async function extractFiles(
   emit?.({ type: 'package-start', packageName, packageVersion: installedVersion });
 
   const packageFiles = await getPackageFiles(packageName, config.cwd);
-  const addedByDir = new Map<string, ManagedFileMetadata[]>();
+  const extractedFiles: ManagedFileMetadata[] = [];
   const existingManagedMap = loadManagedFilesMap(config.outputDir);
-  const deletedOnlyDirs = new Set<string>();
-  // Tracks basenames (per directory) force-claimed from a different package so the
+  // Tracks full relPaths force-claimed from a different package so the
   // marker-file merge can evict the previous owner's entry.
-  const forceClaimedByDir = new Map<string, Set<string>>();
+  const forceClaimedPaths = new Set<string>();
   // eslint-disable-next-line functional/no-let
   let wasForced = false;
 
@@ -430,10 +486,8 @@ async function extractFiles(
           emit?.({ type: 'file-modified', packageName, file: packageFile.relPath });
           wasForced = true;
           if (existingOwner) {
-            // Evict the previous owner's entry from the marker file.
-            const claimDir = path.dirname(packageFile.relPath) || '.';
-            if (!forceClaimedByDir.has(claimDir)) forceClaimedByDir.set(claimDir, new Set());
-            forceClaimedByDir.get(claimDir)!.add(path.basename(packageFile.relPath));
+            // Evict the previous owner's entry from the root marker file.
+            forceClaimedPaths.add(packageFile.relPath);
           }
         }
       } else {
@@ -446,12 +500,9 @@ async function extractFiles(
       if (!dryRun && !config.unmanaged && fs.existsSync(destPath)) fs.chmodSync(destPath, 0o444);
 
       if (!config.unmanaged) {
-        const dir = path.dirname(packageFile.relPath) || '.';
-        if (!addedByDir.has(dir)) {
-          addedByDir.set(dir, []);
-        }
-        addedByDir.get(dir)!.push({
-          path: path.basename(packageFile.relPath),
+        // eslint-disable-next-line functional/immutable-data
+        extractedFiles.push({
+          path: packageFile.relPath,
           packageName,
           packageVersion: installedVersion,
           force: wasForced,
@@ -463,9 +514,7 @@ async function extractFiles(
     for (const [relPath, owner] of existingManagedMap) {
       if (owner.packageName !== packageName) continue;
 
-      const fileDir = path.dirname(relPath) === '.' ? '.' : path.dirname(relPath);
-      const dirFiles = addedByDir.get(fileDir) ?? [];
-      const stillPresent = dirFiles.some((m) => m.path === path.basename(relPath));
+      const stillPresent = extractedFiles.some((m) => m.path === relPath);
 
       if (!stillPresent) {
         const fullPath = path.join(config.outputDir, relPath);
@@ -474,61 +523,33 @@ async function extractFiles(
           changes.deleted.push(relPath);
           emit?.({ type: 'file-deleted', packageName, file: relPath });
         }
-        const dir = path.dirname(relPath) === '.' ? '.' : path.dirname(relPath);
-        if (!addedByDir.has(dir)) {
-          deletedOnlyDirs.add(dir);
-        }
       }
     }
 
     if (!dryRun && !config.unmanaged) {
-      // Write updated marker files
-      // eslint-disable-next-line unicorn/no-keyword-prefix
-      for (const [dir, newFiles] of addedByDir) {
-        const markerDir = dir === '.' ? config.outputDir : path.join(config.outputDir, dir);
-        ensureDir(markerDir);
-        const markerPath = path.join(markerDir, MARKER_FILE);
+      // Write a single root marker at outputDir with all managed file paths (relative to outputDir)
+      const rootMarkerPath = path.join(config.outputDir, MARKER_FILE);
 
-        // eslint-disable-next-line unicorn/no-null
-        let existingFiles: ManagedFileMetadata[] = [];
-        if (fs.existsSync(markerPath)) {
-          existingFiles = readCsvMarker(markerPath);
-        }
-
-        // Keep entries from other packages, replace entries from this package.
-        // Also evict entries from other packages for any file force-claimed in this pass.
-        const claimedInDir = forceClaimedByDir.get(dir);
-        const mergedFiles: ManagedFileMetadata[] = [
-          ...existingFiles.filter(
-            (m) => m.packageName !== packageName && !claimedInDir?.has(m.path),
-          ),
-          // eslint-disable-next-line unicorn/no-keyword-prefix
-          ...newFiles,
-        ];
-
-        writeCsvMarker(markerPath, mergedFiles);
+      let existingFiles: ManagedFileMetadata[] = [];
+      if (fs.existsSync(rootMarkerPath)) {
+        existingFiles = readCsvMarker(rootMarkerPath);
       }
 
-      // Update marker files for directories where all managed files were removed (no new files added)
-      for (const dir of deletedOnlyDirs) {
-        const markerDir = dir === '.' ? config.outputDir : path.join(config.outputDir, dir);
-        const markerPath = path.join(markerDir, MARKER_FILE);
+      // Keep entries from other packages, evict entries from force-claimed paths.
+      const mergedFiles: ManagedFileMetadata[] = [
+        ...existingFiles.filter(
+          (m) => m.packageName !== packageName && !forceClaimedPaths.has(m.path),
+        ),
+        ...extractedFiles,
+      ];
 
-        if (!fs.existsSync(markerPath)) continue;
-
-        try {
-          const existingFiles = readCsvMarker(markerPath);
-          const mergedFiles = existingFiles.filter((m) => m.packageName !== packageName);
-
-          if (mergedFiles.length === 0) {
-            fs.chmodSync(markerPath, 0o644);
-            fs.unlinkSync(markerPath);
-          } else {
-            writeCsvMarker(markerPath, mergedFiles);
-          }
-        } catch {
-          // Ignore unreadable marker files
+      if (mergedFiles.length === 0) {
+        if (fs.existsSync(rootMarkerPath)) {
+          fs.chmodSync(rootMarkerPath, 0o644);
+          fs.unlinkSync(rootMarkerPath);
         }
+      } else {
+        writeCsvMarker(rootMarkerPath, mergedFiles);
       }
 
       cleanupEmptyMarkers(config.outputDir);
@@ -827,7 +848,6 @@ export async function purge(config: PurgeConfig): Promise<ConsumerResult> {
   for (const spec of config.packages) {
     const { name: packageName } = parsePackageSpec(spec);
     const deleted: string[] = [];
-    const deletedOnlyDirs = new Set<string>();
 
     emit?.({ type: 'package-start', packageName, packageVersion: 'unknown' });
 
@@ -842,29 +862,22 @@ export async function purge(config: PurgeConfig): Promise<ConsumerResult> {
         deleted.push(relPath);
         emit?.({ type: 'file-deleted', packageName, file: relPath });
       }
-
-      const dir = path.dirname(relPath) === '.' ? '.' : path.dirname(relPath);
-      deletedOnlyDirs.add(dir);
     }
 
     if (!dryRun) {
-      // Update marker files: remove entries owned by this package.
-      for (const dir of deletedOnlyDirs) {
-        const markerDir = dir === '.' ? config.outputDir : path.join(config.outputDir, dir);
-        const markerPath = path.join(markerDir, MARKER_FILE);
-
-        if (!fs.existsSync(markerPath)) continue;
-
+      // Update root marker: remove entries owned by this package.
+      const rootMarkerPath = path.join(config.outputDir, MARKER_FILE);
+      if (fs.existsSync(rootMarkerPath)) {
         // eslint-disable-next-line functional/no-try-statements
         try {
-          const existingFiles = readCsvMarker(markerPath);
+          const existingFiles = readCsvMarker(rootMarkerPath);
           const mergedFiles = existingFiles.filter((m) => m.packageName !== packageName);
 
           if (mergedFiles.length === 0) {
-            fs.chmodSync(markerPath, 0o644);
-            fs.unlinkSync(markerPath);
+            fs.chmodSync(rootMarkerPath, 0o644);
+            fs.unlinkSync(rootMarkerPath);
           } else {
-            writeCsvMarker(markerPath, mergedFiles);
+            writeCsvMarker(rootMarkerPath, mergedFiles);
           }
         } catch {
           // Ignore unreadable marker files
