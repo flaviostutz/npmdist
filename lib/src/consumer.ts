@@ -9,6 +9,7 @@ import path from 'node:path';
 import { execSync } from 'node:child_process';
 
 import { satisfies } from 'semver';
+import ignore from 'ignore';
 
 import {
   ConsumerConfig,
@@ -32,8 +33,6 @@ import {
   readCsvMarker,
   writeCsvMarker,
   parsePackageSpec,
-  parseGitignorePatterns,
-  isGitignored,
   hasManagedFilesUnder,
 } from './utils';
 
@@ -47,9 +46,10 @@ const GITIGNORE_END = '# npmdata:end';
  * section.  These are the "external" patterns (e.g. node_modules, dist) that were written
  * by the project author rather than by npmdata itself.
  */
-function readExternalGitignorePatterns(dir: string): string[] {
+function readExternalGitignore(dir: string): ReturnType<typeof ignore> {
+  const ig = ignore();
   const gitignorePath = path.join(dir, GITIGNORE_FILE);
-  if (!fs.existsSync(gitignorePath)) return [];
+  if (!fs.existsSync(gitignorePath)) return ig;
 
   let content = fs.readFileSync(gitignorePath, 'utf8');
 
@@ -60,7 +60,8 @@ function readExternalGitignorePatterns(dir: string): string[] {
     content = content.slice(0, startIdx) + content.slice(endIdx + GITIGNORE_END.length);
   }
 
-  return parseGitignorePatterns(content);
+  ig.add(content);
+  return ig;
 }
 
 /**
@@ -127,7 +128,7 @@ function updateGitignoreForDir(dir: string, managedFilenames: string[], addEntri
  */
 export function compressGitignoreEntries(managedPaths: string[], outputDir: string): string[] {
   const managedSet = new Set(managedPaths);
-  const gitignorePatterns = readExternalGitignorePatterns(outputDir);
+  const gitignore = readExternalGitignore(outputDir);
 
   // Returns true when every non-special, non-symlink file inside absDir (recursively)
   // appears in managedSet under its full outputDir-relative path (relDir prefix included).
@@ -142,7 +143,7 @@ export function compressGitignoreEntries(managedPaths: string[], outputDir: stri
       if (lstat.isDirectory()) {
         // Skip gitignored subdirs that have no managed files — they are not our concern
         // and traversing them (e.g. node_modules) causes serious performance problems.
-        if (isGitignored(entry, gitignorePatterns) && !hasManagedFilesUnder(relEntry, managedSet)) {
+        if (gitignore.ignores(entry) && !hasManagedFilesUnder(relEntry, managedSet)) {
           continue;
         }
         if (!isDirFullyManaged(absEntry, relEntry)) return false;
@@ -235,7 +236,7 @@ function updateGitignores(outputDir: string, addEntries = true): void {
   }
 
   // Read external gitignore patterns once for the whole walk.
-  const gitignorePatterns = readExternalGitignorePatterns(outputDir);
+  const gitignore = readExternalGitignore(outputDir);
 
   // Remove npmdata sections from all subdirectory .gitignore files (migration / cleanup of old format)
   const cleanupSubDirGitignores = (dir: string): void => {
@@ -247,7 +248,7 @@ function updateGitignores(outputDir: string, addEntries = true): void {
 
         // Skip gitignored directories that have no managed files under them —
         // traversing them (e.g. node_modules) causes serious performance problems.
-        if (isGitignored(item, gitignorePatterns) && !hasManagedFilesUnder(relPath, managedPaths)) {
+        if (gitignore.ignores(item) && !hasManagedFilesUnder(relPath, managedPaths)) {
           continue;
         }
 
@@ -424,7 +425,7 @@ function cleanupEmptyMarkers(outputDir: string): void {
 }
 
 function cleanupEmptyDirs(outputDir: string): void {
-  const gitignorePatterns = readExternalGitignorePatterns(outputDir);
+  const gitignore = readExternalGitignore(outputDir);
   const managedPaths = new Set<string>(loadAllManagedFiles(outputDir).map((m) => m.path));
 
   const walkDir = (dir: string): boolean => {
@@ -439,7 +440,7 @@ function cleanupEmptyDirs(outputDir: string): void {
 
         // Skip gitignored directories that have no managed files — they are not our concern
         // and traversing them (e.g. node_modules) causes serious performance problems.
-        if (isGitignored(item, gitignorePatterns) && !hasManagedFilesUnder(relPath, managedPaths)) {
+        if (gitignore.ignores(item) && !hasManagedFilesUnder(relPath, managedPaths)) {
           isEmpty = false; // treat as non-empty so we preserve the parent directory
           continue;
         }

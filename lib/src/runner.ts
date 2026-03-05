@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { minimatch } from 'minimatch';
+import ignore from 'ignore';
 
 import { NpmdataExtractEntry } from './types';
 import { parsePackageSpec } from './utils';
@@ -230,11 +231,31 @@ export function filterEntriesByTags(
 // ─── Glob helpers ─────────────────────────────────────────────────────────────
 
 /**
+ * Read a .gitignore file at the given directory and return an Ignore instance.
+ * Returns an empty Ignore instance when no .gitignore exists or it cannot be read.
+ */
+function readGitignore(dir: string): ReturnType<typeof ignore> {
+  const ig = ignore();
+  const gitignorePath = path.join(dir, '.gitignore');
+  if (!fs.existsSync(gitignorePath)) return ig;
+  // eslint-disable-next-line functional/no-try-statements
+  try {
+    ig.add(fs.readFileSync(gitignorePath, 'utf8'));
+  } catch {
+    // ignore unreadable .gitignore
+  }
+  return ig;
+}
+
+/**
  * Walk a directory tree and return the absolute paths of every node (file or
  * directory) whose path relative to `rootDir` matches `pattern`.
+ * Symlinked directories and directories matched by the root-level .gitignore
+ * are skipped to avoid slow traversals on large projects.
  */
 function globMatchInDir(rootDir: string, pattern: string): string[] {
   const results: string[] = [];
+  const gitignore = readGitignore(rootDir);
 
   const walk = (dir: string, rel: string): void => {
     if (!fs.existsSync(dir)) return;
@@ -247,8 +268,10 @@ function globMatchInDir(rootDir: string, pattern: string): string[] {
       }
       // Always descend into directories so patterns like **/skills/** can match
       // entries deep in the tree even when the directory itself didn't match.
-      const stat = fs.statSync(fullPath);
-      if (stat.isDirectory()) {
+      // Use lstatSync to avoid following symlinks into external directories.
+      // Skip gitignored directories that cannot contain managed files.
+      const lstat = fs.lstatSync(fullPath);
+      if (!lstat.isSymbolicLink() && lstat.isDirectory() && !gitignore.ignores(name)) {
         walk(fullPath, relPath);
       }
     }
@@ -261,19 +284,24 @@ function globMatchInDir(rootDir: string, pattern: string): string[] {
 /**
  * Walk a directory tree and return the absolute paths of files (not directories)
  * whose path relative to `rootDir` matches `pattern`.
+ * Symlinked directories and directories matched by the root-level .gitignore
+ * are skipped to avoid slow traversals on large projects.
  */
 function globMatchFiles(rootDir: string, pattern: string): string[] {
   const results: string[] = [];
+  const gitignore = readGitignore(rootDir);
 
   const walk = (dir: string, rel: string): void => {
     if (!fs.existsSync(dir)) return;
     for (const name of fs.readdirSync(dir)) {
       const fullPath = path.join(dir, name);
       const relPath = rel ? `${rel}/${name}` : name;
-      const stat = fs.statSync(fullPath);
-      if (stat.isDirectory()) {
+      // Use lstatSync to avoid following symlinks into external directories.
+      // Skip gitignored directories.
+      const lstat = fs.lstatSync(fullPath);
+      if (!lstat.isSymbolicLink() && lstat.isDirectory() && !gitignore.ignores(name)) {
         walk(fullPath, relPath);
-      } else if (minimatch(relPath, pattern, { dot: true })) {
+      } else if (!lstat.isSymbolicLink() && minimatch(relPath, pattern, { dot: true })) {
         // eslint-disable-next-line functional/immutable-data
         results.push(fullPath);
       }

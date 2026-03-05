@@ -21,32 +21,6 @@ export function parsePackageSpec(spec: string): { name: string; version: string 
 }
 
 /**
- * Parse gitignore-style patterns from raw file content.
- * Blank lines and comment lines (starting with #) are removed.
- */
-export function parseGitignorePatterns(content: string): string[] {
-  return content
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0 && !line.startsWith('#'));
-}
-
-/**
- * Check if a file or directory name (or relative path segment) is matched by any of the
- * given gitignore-style patterns.  Matching is attempted three ways so that both base-name
- * patterns ("node_modules") and path patterns ("dist/") work as expected.
- */
-export function isGitignored(name: string, patterns: string[]): boolean {
-  const bare = name.endsWith('/') ? name.slice(0, -1) : name;
-  return patterns.some(
-    (pattern) =>
-      minimatch(bare, pattern, { matchBase: true }) ||
-      minimatch(`${bare}/`, pattern, { matchBase: true }) ||
-      minimatch(bare, pattern),
-  );
-}
-
-/**
  * Return true if at least one path in managedPaths is equal to relDir or starts with
  * "relDir/", i.e. lives somewhere inside that directory.
  */
