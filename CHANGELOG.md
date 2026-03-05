@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.10.1 (2026-03-04)
+
+### Maintenance
+
+* release: 0.10.0 [[56232ea](https://github.com/flaviostutz/npmdata/commit/56232ea29fa921ad2f8f6208f9eec10cb7ba7366)]
+* simplify symlink and content replacement management to be focused only on managed files and avoid performance issues on big target output dirs [[c05e8bc](https://github.com/flaviostutz/npmdata/commit/c05e8bc1c67bc1da682ed6763ace9a1fbc4dae72)]
+* use gitignore lib [[08353e6](https://github.com/flaviostutz/npmdata/commit/08353e6c3bbf92a0602e0da9bba34b49de303eb5)]
+
+### Misc
+
+
+### Info
+
+* Authors: Flavio Stutz <flaviostutz@gmail.com>
+
+
 ## 0.10.0 (2026-03-04)
 
 ### Features
