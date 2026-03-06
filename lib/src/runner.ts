@@ -5,12 +5,12 @@ import path from 'node:path';
 
 import { minimatch } from 'minimatch';
 
-import { NpmdataExtractEntry } from './types';
+import { NpmdataConfig, NpmdataExtractEntry } from './types';
 import { parsePackageSpec, readCsvMarker } from './utils';
 
 type PackageJson = {
   name: string;
-  npmdata?: NpmdataExtractEntry[];
+  npmdata?: NpmdataConfig;
 };
 
 /**
@@ -879,7 +879,9 @@ export function run(binDir: string, argv: string[] = process.argv): void {
   const pkg = JSON.parse(fs.readFileSync(pkgJsonPath).toString()) as PackageJson;
 
   const allEntries: NpmdataExtractEntry[] =
-    pkg.npmdata && pkg.npmdata.length > 0 ? pkg.npmdata : [{ package: pkg.name, outputDir: '.' }];
+    pkg.npmdata?.sets && pkg.npmdata.sets.length > 0
+      ? pkg.npmdata.sets
+      : [{ package: pkg.name, outputDir: '.' }];
 
   const userArgs = argv.slice(2);
 

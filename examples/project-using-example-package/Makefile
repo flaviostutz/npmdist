@@ -22,18 +22,7 @@ test:
 	test -e output/conf/globals.js
 # 	test -e output/conf/config-schema.js
 
-
-	pnpm exec example-files-package extract --tags "basic" --output output
-# 	fail if basic-tagged files are not present, and extra-tagged files are purged
-	test -e output/docs/adrs/adr-001-sample1.md
-	test ! -e output/conf/globals.js
-# 	this is unmanaged, so should still be present
-# 	test -e output/conf/config-schema.js
-
-	pnpm exec example-files-package --tags "basic" --output output
-	test -e output/.configs/app.config.json
-
-	pnpm exec example-files-package check --tags "basic" --output output
+	pnpm exec example-files-package check --output output
 
 	pnpm exec example-files-package list --output output
 

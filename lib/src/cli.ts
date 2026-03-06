@@ -12,7 +12,7 @@ import { cosmiconfig } from 'cosmiconfig';
 import { extract, check, list, purge } from './consumer';
 import { initPublisher } from './publisher';
 import { runEntries } from './runner';
-import { ConsumerConfig, NpmdataExtractEntry, ProgressEvent } from './types';
+import { ConsumerConfig, NpmdataConfig, NpmdataExtractEntry, ProgressEvent } from './types';
 
 /**
  * CLI for npmdata
@@ -21,23 +21,27 @@ import { ConsumerConfig, NpmdataExtractEntry, ProgressEvent } from './types';
 export async function cli(processArgs: string[], cliPath?: string): Promise<number> {
   const args = processArgs.slice(2);
 
-  if (args.length === 0) {
-    printUsage();
-    return 1;
-  }
-
-  const command = args[0];
-
-  // Handle global help and version flags
-  if (command === '--help' || command === '-h') {
+  // Handle global help and version flags before defaulting to extract
+  if (args.length > 0 && (args[0] === '--help' || args[0] === '-h')) {
     printUsage();
     return 0;
   }
 
-  if (command === '--version') {
+  if (args.length > 0 && args[0] === '--version') {
     const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json')).toString());
     console.log(pkg.version);
     return 0;
+  }
+
+  // Default to 'extract' when no args are given or when the first arg is a flag
+  let command: string;
+  let argsOffset: number;
+  if (args.length === 0 || args[0].startsWith('-')) {
+    command = 'extract';
+    argsOffset = 0;
+  } else {
+    command = args[0];
+    argsOffset = 1;
   }
 
   // Handle init command
@@ -290,7 +294,7 @@ export async function cli(processArgs: string[], cliPath?: string): Promise<numb
   let outDir = process.cwd();
   let outputFlagProvided = false;
 
-  for (let i = 1; i < args.length; i++) {
+  for (let i = argsOffset; i < args.length; i++) {
     if (args[i] === '--packages') {
       packageSpecs = args[++i];
     } else if (args[i] === '--force') {
@@ -500,13 +504,13 @@ export async function cli(processArgs: string[], cliPath?: string): Promise<numb
 /**
  * Search for an npmdata configuration using cosmiconfig.
  * Looks for:
- *   - "npmdata" key in package.json
- *   - .npmdatarc  (JSON or YAML)
+ *   - "npmdata" key in package.json (object with "sets" array)
+ *   - .npmdatarc  (JSON or YAML object with "sets" array)
  *   - .npmdatarc.json / .npmdatarc.yaml / .npmdatarc.js
  *   - npmdata.config.js
  *
- * The resolved value must be an array of NpmdataExtractEntry objects.
- * Returns the entries array when found, or null when no configuration is present.
+ * The resolved value must be an object with a "sets" array of NpmdataExtractEntry objects.
+ * Returns the sets array when found, or undefined when no configuration is present.
  */
 async function loadNpmdataConfig(): Promise<NpmdataExtractEntry[] | undefined> {
   const explorer = cosmiconfig('npmdata');
@@ -515,12 +519,12 @@ async function loadNpmdataConfig(): Promise<NpmdataExtractEntry[] | undefined> {
     // eslint-disable-next-line no-undefined
     return undefined;
   }
-  const cfg = result.config;
-  if (!Array.isArray(cfg) || cfg.length === 0) {
+  const cfg = result.config as NpmdataConfig;
+  if (!cfg || !Array.isArray(cfg.sets) || cfg.sets.length === 0) {
     // eslint-disable-next-line no-undefined
     return undefined;
   }
-  return cfg as NpmdataExtractEntry[];
+  return cfg.sets as NpmdataExtractEntry[];
 }
 
 function printUsage(): void {

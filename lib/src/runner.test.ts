@@ -74,7 +74,7 @@ describe('runner', () => {
     });
 
     it('uses a single default entry when npmdata is an empty array', () => {
-      setupPackageJson({ name: 'my-pkg', npmdata: [] });
+      setupPackageJson({ name: 'my-pkg', npmdata: { sets: [] } });
 
       run(BIN_DIR, EXTRACT_ARGV);
 
@@ -85,10 +85,12 @@ describe('runner', () => {
     it('invokes execSync once per npmdata entry', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a' },
-          { package: 'pkg-b', outputDir: './b' },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a' },
+            { package: 'pkg-b', outputDir: './b' },
+          ],
+        },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -119,7 +121,7 @@ describe('runner', () => {
     it('resolves a relative outputDir to an absolute path in the extract command', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'my-pkg', outputDir: 'data' }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: 'data' }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -130,7 +132,7 @@ describe('runner', () => {
     it('resolves dot outputDir to the current working directory in the extract command', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'my-pkg', outputDir: '.' }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.' }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -178,7 +180,7 @@ describe('runner', () => {
     it('uses --output dir as base when resolving outputDir in the extract command', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'my-pkg', outputDir: 'data' }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: 'data' }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--output', '/custom/base']);
@@ -189,7 +191,7 @@ describe('runner', () => {
     it('uses -o shorthand as base when resolving outputDir', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'my-pkg', outputDir: 'data' }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: 'data' }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '-o', '/custom/base']);
@@ -200,7 +202,7 @@ describe('runner', () => {
     it('resolves a relative --output against process.cwd()', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'my-pkg', outputDir: 'data' }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: 'data' }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--output', 'projects/myapp']);
@@ -223,7 +225,7 @@ describe('runner', () => {
     it('builds a minimal command with only required fields', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: [{ package: 'my-pkg', outputDir: './out' }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: './out' }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -244,7 +246,7 @@ describe('runner', () => {
     it('adds --force when force is true', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: [{ package: 'my-pkg', outputDir: '.', force: true }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', force: true }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -255,7 +257,7 @@ describe('runner', () => {
     it('omits --force when force is false', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: [{ package: 'my-pkg', outputDir: '.', force: false }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', force: false }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -266,7 +268,7 @@ describe('runner', () => {
     it('adds --keep-existing when keepExisting is true', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: [{ package: 'my-pkg', outputDir: '.', keepExisting: true }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', keepExisting: true }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -277,7 +279,7 @@ describe('runner', () => {
     it('omits --keep-existing when keepExisting is false', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: [{ package: 'my-pkg', outputDir: '.', keepExisting: false }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', keepExisting: false }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -288,7 +290,7 @@ describe('runner', () => {
     it('omits --no-gitignore when gitignore is true', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: [{ package: 'my-pkg', outputDir: '.', gitignore: true }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', gitignore: true }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -299,7 +301,7 @@ describe('runner', () => {
     it('adds --no-gitignore when gitignore is false', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: [{ package: 'my-pkg', outputDir: '.', gitignore: false }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', gitignore: false }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -310,7 +312,7 @@ describe('runner', () => {
     it('adds --silent when silent is true', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: [{ package: 'my-pkg', outputDir: '.', silent: true }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', silent: true }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -321,7 +323,7 @@ describe('runner', () => {
     it('adds --dry-run when dryRun is true', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: [{ package: 'my-pkg', outputDir: '.', dryRun: true }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', dryRun: true }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -332,7 +334,7 @@ describe('runner', () => {
     it('adds --upgrade when upgrade is true', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: [{ package: 'my-pkg', outputDir: '.', upgrade: true }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', upgrade: true }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -343,7 +345,7 @@ describe('runner', () => {
     it('adds --unmanaged when unmanaged is true', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: [{ package: 'my-pkg', outputDir: '.', unmanaged: true }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', unmanaged: true }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -354,7 +356,7 @@ describe('runner', () => {
     it('omits --unmanaged when unmanaged is false', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: [{ package: 'my-pkg', outputDir: '.', unmanaged: false }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', unmanaged: false }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -365,7 +367,7 @@ describe('runner', () => {
     it('adds --files with a single file pattern', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: [{ package: 'my-pkg', outputDir: '.', files: ['**/*.md'] }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', files: ['**/*.md'] }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -376,7 +378,7 @@ describe('runner', () => {
     it('joins multiple file patterns with a comma', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: [{ package: 'my-pkg', outputDir: '.', files: ['**/*.md', 'data/**'] }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', files: ['**/*.md', 'data/**'] }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -387,7 +389,7 @@ describe('runner', () => {
     it('omits --files when files array is empty', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: [{ package: 'my-pkg', outputDir: '.', files: [] }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', files: [] }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -398,7 +400,7 @@ describe('runner', () => {
     it('adds --content-regex with a single regex pattern', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: [{ package: 'my-pkg', outputDir: '.', contentRegexes: ['foo.*bar'] }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', contentRegexes: ['foo.*bar'] }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -409,7 +411,9 @@ describe('runner', () => {
     it('joins multiple content regex patterns with a comma', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: [{ package: 'my-pkg', outputDir: '.', contentRegexes: ['foo.*bar', '^baz'] }],
+        npmdata: {
+          sets: [{ package: 'my-pkg', outputDir: '.', contentRegexes: ['foo.*bar', '^baz'] }],
+        },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -420,7 +424,7 @@ describe('runner', () => {
     it('omits --content-regex when contentRegexes array is empty', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: [{ package: 'my-pkg', outputDir: '.', contentRegexes: [] }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', contentRegexes: [] }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -431,19 +435,21 @@ describe('runner', () => {
     it('builds a command with all flags enabled', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: [
-          {
-            package: 'full-pkg@^2.0.0',
-            outputDir: './data',
-            force: true,
-            gitignore: false,
-            silent: true,
-            dryRun: true,
-            upgrade: true,
-            files: ['**/*.json', 'docs/**'],
-            contentRegexes: ['schema', 'version'],
-          },
-        ],
+        npmdata: {
+          sets: [
+            {
+              package: 'full-pkg@^2.0.0',
+              outputDir: './data',
+              force: true,
+              gitignore: false,
+              silent: true,
+              dryRun: true,
+              upgrade: true,
+              files: ['**/*.json', 'docs/**'],
+              contentRegexes: ['schema', 'version'],
+            },
+          ],
+        },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -463,7 +469,7 @@ describe('runner', () => {
     it('uses the resolved CLI path in the command', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: [{ package: 'my-pkg', outputDir: '.' }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.' }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -583,10 +589,12 @@ describe('runner', () => {
     it('runs all entries when --tags is not provided', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
-          { package: 'pkg-b', outputDir: './b', tags: ['staging'] },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
+            { package: 'pkg-b', outputDir: './b', tags: ['staging'] },
+          ],
+        },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract']);
@@ -597,10 +605,12 @@ describe('runner', () => {
     it('runs only entries matching the requested tag', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
-          { package: 'pkg-b', outputDir: './b', tags: ['staging'] },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
+            { package: 'pkg-b', outputDir: './b', tags: ['staging'] },
+          ],
+        },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--tags', 'prod']);
@@ -615,11 +625,13 @@ describe('runner', () => {
     it('runs entries matching any of the requested tags', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
-          { package: 'pkg-b', outputDir: './b', tags: ['staging'] },
-          { package: 'pkg-c', outputDir: './c', tags: ['dev'] },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
+            { package: 'pkg-b', outputDir: './b', tags: ['staging'] },
+            { package: 'pkg-c', outputDir: './c', tags: ['dev'] },
+          ],
+        },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--tags', 'prod,staging']);
@@ -634,7 +646,7 @@ describe('runner', () => {
     it('runs no extract commands but purges all entries when no entry matches the requested tag', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'pkg-a', outputDir: './a', tags: ['dev'] }],
+        npmdata: { sets: [{ package: 'pkg-a', outputDir: './a', tags: ['dev'] }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--tags', 'prod']);
@@ -648,10 +660,12 @@ describe('runner', () => {
     it('skips entries without tags from extract but purges them when a tag filter is active', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a' },
-          { package: 'pkg-b', outputDir: './b', tags: ['prod'] },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a' },
+            { package: 'pkg-b', outputDir: './b', tags: ['prod'] },
+          ],
+        },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--tags', 'prod']);
@@ -666,7 +680,7 @@ describe('runner', () => {
     it('does not pass --tags to the extract command', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'pkg-a', outputDir: './a', tags: ['prod'] }],
+        npmdata: { sets: [{ package: 'pkg-a', outputDir: './a', tags: ['prod'] }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--tags', 'prod']);
@@ -679,10 +693,12 @@ describe('runner', () => {
     it('purges excluded entries when a tag filter is active', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
-          { package: 'pkg-b', outputDir: './b', tags: ['staging'] },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
+            { package: 'pkg-b', outputDir: './b', tags: ['staging'] },
+          ],
+        },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--tags', 'prod']);
@@ -697,10 +713,12 @@ describe('runner', () => {
     it('does not purge anything when no tag filter is active', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
-          { package: 'pkg-b', outputDir: './b', tags: ['staging'] },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
+            { package: 'pkg-b', outputDir: './b', tags: ['staging'] },
+          ],
+        },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract']);
@@ -714,11 +732,13 @@ describe('runner', () => {
     it('purges all excluded entries when multiple are excluded', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
-          { package: 'pkg-b', outputDir: './b', tags: ['staging'] },
-          { package: 'pkg-c', outputDir: './c', tags: ['dev'] },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
+            { package: 'pkg-b', outputDir: './b', tags: ['staging'] },
+            { package: 'pkg-c', outputDir: './c', tags: ['dev'] },
+          ],
+        },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--tags', 'prod']);
@@ -733,10 +753,12 @@ describe('runner', () => {
     it('purges entries without tags when a tag filter is active', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
-          { package: 'pkg-untagged', outputDir: './u' },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
+            { package: 'pkg-untagged', outputDir: './u' },
+          ],
+        },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--tags', 'prod']);
@@ -748,10 +770,12 @@ describe('runner', () => {
     it('purges nothing (only extract) when all entries match the tag filter', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
-          { package: 'pkg-b', outputDir: './b', tags: ['prod', 'staging'] },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
+            { package: 'pkg-b', outputDir: './b', tags: ['prod', 'staging'] },
+          ],
+        },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--tags', 'prod']);
@@ -764,10 +788,12 @@ describe('runner', () => {
     it('runs only purge commands when no entries match the tag filter', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a', tags: ['staging'] },
-          { package: 'pkg-b', outputDir: './b', tags: ['dev'] },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a', tags: ['staging'] },
+            { package: 'pkg-b', outputDir: './b', tags: ['dev'] },
+          ],
+        },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--tags', 'prod']);
@@ -851,7 +877,7 @@ describe('runner', () => {
     it('adds --unmanaged to the extract command when the flag is in argv', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'my-pkg', outputDir: '.' }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.' }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--unmanaged']);
@@ -862,7 +888,7 @@ describe('runner', () => {
     it('overrides entry-level unmanaged:false and adds --unmanaged to the command', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'my-pkg', outputDir: '.', unmanaged: false }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', unmanaged: false }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--unmanaged']);
@@ -873,7 +899,7 @@ describe('runner', () => {
     it('does not add --unmanaged when the flag is absent', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'my-pkg', outputDir: '.' }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.' }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -884,10 +910,12 @@ describe('runner', () => {
     it('applies --unmanaged override across all entries', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a' },
-          { package: 'pkg-b', outputDir: './b', unmanaged: false },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a' },
+            { package: 'pkg-b', outputDir: './b', unmanaged: false },
+          ],
+        },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--unmanaged']);
@@ -903,7 +931,7 @@ describe('runner', () => {
     it('adds --no-gitignore to the extract command when the flag is in argv', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'my-pkg', outputDir: '.' }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.' }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--no-gitignore']);
@@ -914,7 +942,7 @@ describe('runner', () => {
     it('overrides entry-level gitignore:true and adds --no-gitignore to the command', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'my-pkg', outputDir: '.', gitignore: true }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', gitignore: true }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--no-gitignore']);
@@ -925,7 +953,7 @@ describe('runner', () => {
     it('does not add --no-gitignore when the flag is absent', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'my-pkg', outputDir: '.' }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.' }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -936,10 +964,12 @@ describe('runner', () => {
     it('applies --no-gitignore override across all entries', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a', gitignore: true },
-          { package: 'pkg-b', outputDir: './b' },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a', gitignore: true },
+            { package: 'pkg-b', outputDir: './b' },
+          ],
+        },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--no-gitignore']);
@@ -1094,10 +1124,12 @@ describe('runner', () => {
     it('runs a check command for each entry', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a' },
-          { package: 'pkg-b', outputDir: './b' },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a' },
+            { package: 'pkg-b', outputDir: './b' },
+          ],
+        },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'check']);
@@ -1110,7 +1142,7 @@ describe('runner', () => {
     it('passes correct package and output dir in the check command', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'pkg-a@^1.0.0', outputDir: './data' }],
+        npmdata: { sets: [{ package: 'pkg-a@^1.0.0', outputDir: './data' }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'check']);
@@ -1124,10 +1156,12 @@ describe('runner', () => {
     it('respects --tags when running check', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
-          { package: 'pkg-b', outputDir: './b', tags: ['staging'] },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
+            { package: 'pkg-b', outputDir: './b', tags: ['staging'] },
+          ],
+        },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'check', '--tags', 'prod']);
@@ -1139,7 +1173,7 @@ describe('runner', () => {
     it('uses --output as base dir for resolving outputDir in check', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'my-pkg', outputDir: 'data' }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: 'data' }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'check', '--output', '/custom/base']);
@@ -1159,7 +1193,7 @@ describe('runner', () => {
     it('passes --files from entry to check command', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'pkg-a', outputDir: './data', files: ['*.md', 'docs/**'] }],
+        npmdata: { sets: [{ package: 'pkg-a', outputDir: './data', files: ['*.md', 'docs/**'] }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'check']);
@@ -1170,7 +1204,9 @@ describe('runner', () => {
     it('passes --content-regex from entry to check command', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'pkg-a', outputDir: './data', contentRegexes: ['foo.*bar'] }],
+        npmdata: {
+          sets: [{ package: 'pkg-a', outputDir: './data', contentRegexes: ['foo.*bar'] }],
+        },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'check']);
@@ -1181,14 +1217,16 @@ describe('runner', () => {
     it('passes both --files and --content-regex from entry to check command', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          {
-            package: 'pkg-a',
-            outputDir: './data',
-            files: ['data/**'],
-            contentRegexes: ['pattern'],
-          },
-        ],
+        npmdata: {
+          sets: [
+            {
+              package: 'pkg-a',
+              outputDir: './data',
+              files: ['data/**'],
+              contentRegexes: ['pattern'],
+            },
+          ],
+        },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'check']);
@@ -1201,10 +1239,12 @@ describe('runner', () => {
     it('skips entries with unmanaged:true during check', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-managed', outputDir: './a' },
-          { package: 'pkg-unmanaged', outputDir: './b', unmanaged: true },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-managed', outputDir: './a' },
+            { package: 'pkg-unmanaged', outputDir: './b', unmanaged: true },
+          ],
+        },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'check']);
@@ -1217,10 +1257,12 @@ describe('runner', () => {
     it('skips all entries during check when --unmanaged flag is set', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a' },
-          { package: 'pkg-b', outputDir: './b' },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a' },
+            { package: 'pkg-b', outputDir: './b' },
+          ],
+        },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'check', '--unmanaged']);
@@ -1251,15 +1293,17 @@ describe('runner', () => {
         Buffer.from(
           JSON.stringify({
             name: 'my-pkg',
-            npmdata: [
-              {
-                package: 'pkg-a',
-                outputDir: '.',
-                contentReplacements: [
-                  { files: 'doc.md', match: '<!-- old -->', replace: '<!-- new -->' },
-                ],
-              },
-            ],
+            npmdata: {
+              sets: [
+                {
+                  package: 'pkg-a',
+                  outputDir: '.',
+                  contentReplacements: [
+                    { files: 'doc.md', match: '<!-- old -->', replace: '<!-- new -->' },
+                  ],
+                },
+              ],
+            },
           }),
         ),
       );
@@ -1290,15 +1334,17 @@ describe('runner', () => {
         Buffer.from(
           JSON.stringify({
             name: 'my-pkg',
-            npmdata: [
-              {
-                package: 'pkg-a',
-                outputDir: '.',
-                contentReplacements: [
-                  { files: 'doc.md', match: '<!-- old -->', replace: '<!-- new -->' },
-                ],
-              },
-            ],
+            npmdata: {
+              sets: [
+                {
+                  package: 'pkg-a',
+                  outputDir: '.',
+                  contentReplacements: [
+                    { files: 'doc.md', match: '<!-- old -->', replace: '<!-- new -->' },
+                  ],
+                },
+              ],
+            },
           }),
         ),
       );
@@ -1315,10 +1361,12 @@ describe('runner', () => {
     it('runs a list command for each unique outputDir', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a' },
-          { package: 'pkg-b', outputDir: './b' },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a' },
+            { package: 'pkg-b', outputDir: './b' },
+          ],
+        },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'list']);
@@ -1331,10 +1379,12 @@ describe('runner', () => {
     it('runs only one list command when multiple entries share the same outputDir', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './data' },
-          { package: 'pkg-b', outputDir: './data' },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './data' },
+            { package: 'pkg-b', outputDir: './data' },
+          ],
+        },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'list']);
@@ -1345,7 +1395,7 @@ describe('runner', () => {
     it('passes the resolved output dir in the list command', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'pkg-a', outputDir: './data' }],
+        npmdata: { sets: [{ package: 'pkg-a', outputDir: './data' }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'list']);
@@ -1356,7 +1406,7 @@ describe('runner', () => {
     it('uses --output as base dir for resolving outputDir in list', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'my-pkg', outputDir: 'data' }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: 'data' }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'list', '--output', '/custom/base']);
@@ -1367,10 +1417,12 @@ describe('runner', () => {
     it('lists all entries regardless of tag filter', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
-          { package: 'pkg-b', outputDir: './b', tags: ['staging'] },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
+            { package: 'pkg-b', outputDir: './b', tags: ['staging'] },
+          ],
+        },
       });
 
       // Even with --tags, list should show all output dirs
@@ -1393,10 +1445,12 @@ describe('runner', () => {
     it('runs a purge command for each entry', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a' },
-          { package: 'pkg-b', outputDir: './b' },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a' },
+            { package: 'pkg-b', outputDir: './b' },
+          ],
+        },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'purge']);
@@ -1409,10 +1463,12 @@ describe('runner', () => {
     it('respects --tags when running purge', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
-          { package: 'pkg-b', outputDir: './b', tags: ['staging'] },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
+            { package: 'pkg-b', outputDir: './b', tags: ['staging'] },
+          ],
+        },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'purge', '--tags', 'prod']);
@@ -1424,7 +1480,7 @@ describe('runner', () => {
     it('overlays --dry-run from argv onto the purge command', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'my-pkg', outputDir: '.' }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.' }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'purge', '--dry-run']);
@@ -1435,7 +1491,7 @@ describe('runner', () => {
     it('overlays --silent from argv onto the purge command', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'my-pkg', outputDir: '.' }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.' }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'purge', '--silent']);
@@ -1446,7 +1502,7 @@ describe('runner', () => {
     it('uses --output as base dir for resolving outputDir in purge', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'my-pkg', outputDir: 'data' }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: 'data' }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'purge', '--output', '/custom/base']);
@@ -1496,13 +1552,15 @@ describe('runner', () => {
         Buffer.from(
           JSON.stringify({
             name: 'my-pkg',
-            npmdata: [
-              {
-                package: 'pkg-a',
-                outputDir: 'out',
-                symlinks: [{ source: 'skills/*', target: '.github/skills' }],
-              },
-            ],
+            npmdata: {
+              sets: [
+                {
+                  package: 'pkg-a',
+                  outputDir: 'out',
+                  symlinks: [{ source: 'skills/*', target: '.github/skills' }],
+                },
+              ],
+            },
           }),
         ),
       );
@@ -1535,13 +1593,15 @@ describe('runner', () => {
         Buffer.from(
           JSON.stringify({
             name: 'my-pkg',
-            npmdata: [
-              {
-                package: 'pkg-a',
-                outputDir: 'out',
-                symlinks: [{ source: 'skills/*', target: '.github/skills' }],
-              },
-            ],
+            npmdata: {
+              sets: [
+                {
+                  package: 'pkg-a',
+                  outputDir: 'out',
+                  symlinks: [{ source: 'skills/*', target: '.github/skills' }],
+                },
+              ],
+            },
           }),
         ),
       );
@@ -1558,7 +1618,7 @@ describe('runner', () => {
     it('adds --dry-run to the extract command when --dry-run is in argv', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'my-pkg', outputDir: '.' }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.' }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--dry-run']);
@@ -1569,7 +1629,7 @@ describe('runner', () => {
     it('adds --silent to the extract command when --silent is in argv', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'my-pkg', outputDir: '.' }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.' }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--silent']);
@@ -1580,7 +1640,7 @@ describe('runner', () => {
     it('merges argv --dry-run with entry dryRun:false (argv wins)', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'my-pkg', outputDir: '.', dryRun: false }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', dryRun: false }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--dry-run']);
@@ -1591,7 +1651,7 @@ describe('runner', () => {
     it('keeps --dry-run when already set in entry config', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'my-pkg', outputDir: '.', dryRun: true }],
+        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', dryRun: true }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract']);
@@ -1602,10 +1662,12 @@ describe('runner', () => {
     it('applies --dry-run overlay to all entries', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a' },
-          { package: 'pkg-b', outputDir: './b' },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a' },
+            { package: 'pkg-b', outputDir: './b' },
+          ],
+        },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--dry-run']);
@@ -1795,7 +1857,7 @@ describe('runner', () => {
     it('prints help and does not run any extractions when --help is present', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'pkg-a', outputDir: './a', tags: ['prod'] }],
+        npmdata: { sets: [{ package: 'pkg-a', outputDir: './a', tags: ['prod'] }] },
       });
       const writeSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
 
@@ -1820,10 +1882,12 @@ describe('runner', () => {
     it('lists tags from npmdata entries in help output', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
-          { package: 'pkg-b', outputDir: './b', tags: ['staging', 'prod'] },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a', tags: ['prod'] },
+            { package: 'pkg-b', outputDir: './b', tags: ['staging', 'prod'] },
+          ],
+        },
       });
       const writeSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
 
@@ -1838,7 +1902,7 @@ describe('runner', () => {
     it('shows placeholder when no tags are defined', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'pkg-a', outputDir: './a' }],
+        npmdata: { sets: [{ package: 'pkg-a', outputDir: './a' }] },
       });
       const writeSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
 
@@ -1854,7 +1918,7 @@ describe('runner', () => {
     it('runs extract when no action is provided', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'pkg-a', outputDir: './a' }],
+        npmdata: { sets: [{ package: 'pkg-a', outputDir: './a' }] },
       });
 
       run(BIN_DIR, ['node', 'script.js']);
@@ -1866,7 +1930,7 @@ describe('runner', () => {
     it('runs extract when only flags are provided (no explicit action)', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'pkg-a', outputDir: './a', tags: ['t1'] }],
+        npmdata: { sets: [{ package: 'pkg-a', outputDir: './a', tags: ['t1'] }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', '--tags', 't1']);
@@ -2395,10 +2459,12 @@ describe('runner', () => {
     it('writes a blank line between entries for extract', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a' },
-          { package: 'pkg-b', outputDir: './b' },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a' },
+            { package: 'pkg-b', outputDir: './b' },
+          ],
+        },
       });
       const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
 
@@ -2412,10 +2478,12 @@ describe('runner', () => {
     it('writes "Total extracted" after multiple extract entries', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a' },
-          { package: 'pkg-b', outputDir: './b' },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a' },
+            { package: 'pkg-b', outputDir: './b' },
+          ],
+        },
       });
       mockExecSync.mockReturnValue(
         'Extraction complete: 2 added, 0 modified, 0 deleted, 0 skipped',
@@ -2432,7 +2500,7 @@ describe('runner', () => {
     it('does not write "Total extracted" for a single extract entry', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'pkg-a', outputDir: './a' }],
+        npmdata: { sets: [{ package: 'pkg-a', outputDir: './a' }] },
       });
       mockExecSync.mockReturnValue(
         'Extraction complete: 2 added, 0 modified, 0 deleted, 0 skipped',
@@ -2449,10 +2517,12 @@ describe('runner', () => {
     it('writes a blank line between entries for purge', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a' },
-          { package: 'pkg-b', outputDir: './b' },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a' },
+            { package: 'pkg-b', outputDir: './b' },
+          ],
+        },
       });
       const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
 
@@ -2466,10 +2536,12 @@ describe('runner', () => {
     it('writes "Total purged" accumulating counts from multiple purge entries', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a' },
-          { package: 'pkg-b', outputDir: './b' },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a' },
+            { package: 'pkg-b', outputDir: './b' },
+          ],
+        },
       });
       mockExecSync.mockReturnValue('Purge complete: 3 deleted');
       const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
@@ -2484,7 +2556,7 @@ describe('runner', () => {
     it('does not write "Total purged" for a single purge entry', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'pkg-a', outputDir: './a' }],
+        npmdata: { sets: [{ package: 'pkg-a', outputDir: './a' }] },
       });
       mockExecSync.mockReturnValue('Purge complete: 3 deleted');
       const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
@@ -2499,10 +2571,12 @@ describe('runner', () => {
     it('does not write "Total purged" when --silent is set', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a' },
-          { package: 'pkg-b', outputDir: './b' },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a' },
+            { package: 'pkg-b', outputDir: './b' },
+          ],
+        },
       });
       mockExecSync.mockReturnValue('Purge complete: 3 deleted');
       const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
@@ -2517,10 +2591,12 @@ describe('runner', () => {
     it('writes a blank line between entries for check', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a' },
-          { package: 'pkg-b', outputDir: './b' },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a' },
+            { package: 'pkg-b', outputDir: './b' },
+          ],
+        },
       });
       const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
 
@@ -2534,10 +2610,12 @@ describe('runner', () => {
     it('writes "Total checked" after multiple check entries', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [
-          { package: 'pkg-a', outputDir: './a' },
-          { package: 'pkg-b', outputDir: './b' },
-        ],
+        npmdata: {
+          sets: [
+            { package: 'pkg-a', outputDir: './a' },
+            { package: 'pkg-b', outputDir: './b' },
+          ],
+        },
       });
       const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
 
@@ -2551,7 +2629,7 @@ describe('runner', () => {
     it('does not write "Total checked" for a single check entry', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: [{ package: 'pkg-a', outputDir: './a' }],
+        npmdata: { sets: [{ package: 'pkg-a', outputDir: './a' }] },
       });
       const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
 

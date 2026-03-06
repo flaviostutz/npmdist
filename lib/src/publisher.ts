@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { readJsonFile, writeJsonFile, parsePackageSpec } from './utils';
-import { PublishablePackageJson, NpmdataExtractEntry } from './types';
+import { PublishablePackageJson, NpmdataConfig, NpmdataExtractEntry } from './types';
 
 /**
  * Read the version of the currently running npmdata package so we can pin it
@@ -112,8 +112,8 @@ function preparePackageJson(
   packageJson.dependencies.npmdata = getOwnVersion();
 
   // Build npmdata entries array: one entry per package (main + additional)
-  const existingEntries: NpmdataExtractEntry[] = Array.isArray(packageJson.npmdata)
-    ? (packageJson.npmdata as NpmdataExtractEntry[])
+  const existingEntries: NpmdataExtractEntry[] = Array.isArray(packageJson.npmdata?.sets)
+    ? (packageJson.npmdata.sets as NpmdataExtractEntry[])
     : [];
 
   // Ensure the main package has an entry
@@ -160,7 +160,7 @@ function preparePackageJson(
     }
   }
 
-  packageJson.npmdata = existingEntries;
+  packageJson.npmdata = { sets: existingEntries } as NpmdataConfig;
 
   if (!packageJson.bin) {
     packageJson.bin = 'bin/npmdata.js';
@@ -206,7 +206,7 @@ export async function initPublisher(
     fs.writeFileSync(cliScriptPath, generateCliScript(), 'utf8');
     fs.chmodSync(cliScriptPath, 0o755);
 
-    const allEntries = packageJson.npmdata as NpmdataExtractEntry[];
+    const allEntries = (packageJson.npmdata as NpmdataConfig).sets;
     const finalAdditionalPackages = allEntries
       .filter((e) => {
         const { name } = parsePackageSpec(e.package);

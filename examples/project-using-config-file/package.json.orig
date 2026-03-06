@@ -16,9 +16,7 @@
           "docs/**",
           "data/**"
         ],
-        "tags": [
-          "basic"
-        ]
+        "tags": ["basic"]
       },
       {
         "package": "eslint@8",
@@ -27,9 +25,7 @@
           "conf/globals.js"
         ],
         "unmanaged": true,
-        "tags": [
-          "extra"
-        ]
+        "tags": ["extra"]
       }
     ]
   }

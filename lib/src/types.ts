@@ -352,6 +352,17 @@ export type NpmdataExtractEntry = {
 };
 
 /**
+ * Top-level config structure stored under the "npmdata" key in package.json
+ * or in a .npmdatarc file.
+ */
+export type NpmdataConfig = {
+  /**
+   * The list of extraction entries to process.
+   */
+  sets: NpmdataExtractEntry[];
+};
+
+/**
  * Package.json for a publishable project
  */
 export type PublishablePackageJson = {
@@ -362,6 +373,6 @@ export type PublishablePackageJson = {
   bin?: string;
   files?: string[];
   dependencies?: Record<string, string>;
-  npmdata?: NpmdataExtractEntry[];
+  npmdata?: NpmdataConfig;
   [key: string]: unknown;
 };

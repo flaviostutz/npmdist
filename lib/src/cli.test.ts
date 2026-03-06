@@ -125,9 +125,21 @@ describe('CLI', () => {
     jest.restoreAllMocks();
   });
 
-  it('should print usage and return 1 when no args given', async () => {
+  it('should default to extract and return 1 when no args given (no packages)', async () => {
     const exitCode = await cli(['node', 'cli.js']);
     expect(exitCode).toBe(1);
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining('--packages option is required'),
+    );
+  });
+
+  it('should default to extract action when no explicit action is passed', async () => {
+    mockExtract.mockResolvedValue(defaultExtractResult);
+    const exitCode = await cli(['node', 'cli.js', '--packages', 'my-pkg']);
+    expect(exitCode).toBe(0);
+    expect(mockExtract).toHaveBeenCalled();
+    const config = mockExtract.mock.calls[0][0];
+    expect(config.packages).toEqual(['my-pkg']);
   });
 
   it('should return 0 for --help flag', async () => {
@@ -146,10 +158,13 @@ describe('CLI', () => {
     expect(console.log).toHaveBeenCalled();
   });
 
-  it('should treat -v as verbose flag (not version) and return 1 for unknown command', async () => {
-    // -v alone is now the verbose flag; without a valid command it errors
+  it('should treat -v as verbose flag and default to extract (return 1, no packages)', async () => {
+    // -v alone triggers verbose on default extract command; fails because --packages is missing
     const exitCode = await cli(['node', 'cli.js', '-v']);
     expect(exitCode).toBe(1);
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining('--packages option is required'),
+    );
   });
 
   describe('init command', () => {
@@ -1208,7 +1223,7 @@ describe('CLI', () => {
 
     it('extract without --packages uses cosmiconfig entries and returns 0', async () => {
       mockCosmicSearch.mockResolvedValue({
-        config: sampleEntries,
+        config: { sets: sampleEntries },
         filepath: '/project/package.json',
         isEmpty: false,
       });
@@ -1227,7 +1242,7 @@ describe('CLI', () => {
 
     it('check without --packages uses cosmiconfig entries and returns 0', async () => {
       mockCosmicSearch.mockResolvedValue({
-        config: sampleEntries,
+        config: { sets: sampleEntries },
         filepath: '/project/.npmdatarc',
         isEmpty: false,
       });
@@ -1246,7 +1261,7 @@ describe('CLI', () => {
 
     it('purge without --packages uses cosmiconfig entries and returns 0', async () => {
       mockCosmicSearch.mockResolvedValue({
-        config: sampleEntries,
+        config: { sets: sampleEntries },
         filepath: '/project/package.json',
         isEmpty: false,
       });
@@ -1300,9 +1315,9 @@ describe('CLI', () => {
       );
     });
 
-    it('extract without --packages falls back to error when config is empty array', async () => {
+    it('extract without --packages falls back to error when config has empty sets', async () => {
       mockCosmicSearch.mockResolvedValue({
-        config: [],
+        config: { sets: [] },
         filepath: '/project/package.json',
         isEmpty: false,
       });
@@ -1328,7 +1343,7 @@ describe('CLI', () => {
 
     it('config-file mode uses processArgs[1] as cliPath when none supplied', async () => {
       mockCosmicSearch.mockResolvedValue({
-        config: sampleEntries,
+        config: { sets: sampleEntries },
         filepath: '/project/package.json',
         isEmpty: false,
       });
@@ -1346,7 +1361,7 @@ describe('CLI', () => {
 
     it('config-file mode passes CLI flags (--dry-run, --output) through argv to runEntries', async () => {
       mockCosmicSearch.mockResolvedValue({
-        config: sampleEntries,
+        config: { sets: sampleEntries },
         filepath: '/project/package.json',
         isEmpty: false,
       });

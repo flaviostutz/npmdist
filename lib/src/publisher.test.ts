@@ -64,7 +64,7 @@ describe('Publisher', () => {
       await initPublisher(['docs/**', 'configs/*.json'], { workingDir: tmpDir });
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
-      const entries = pkgJson.npmdata as Array<{ package: string; files: string[] }>;
+      const entries = pkgJson.npmdata.sets as Array<{ package: string; files: string[] }>;
       // eslint-disable-next-line no-restricted-syntax
       for (const entry of entries) {
         expect(entry.files).toContain('docs/**');
@@ -219,7 +219,7 @@ describe('Publisher', () => {
       expect(result.additionalPackages).toEqual(['shared-data@^1.0.0', 'other-pkg']);
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
-      const entries = pkgJson.npmdata as Array<{ package: string }>;
+      const entries = pkgJson.npmdata.sets as Array<{ package: string }>;
       expect(entries.some((e) => e.package === 'shared-data@^1.0.0')).toBe(true);
       expect(entries.some((e) => e.package === 'other-pkg')).toBe(true);
     });
@@ -250,7 +250,7 @@ describe('Publisher', () => {
       });
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
-      const entries = pkgJson.npmdata as Array<{ package: string }>;
+      const entries = pkgJson.npmdata.sets as Array<{ package: string }>;
       const matches = entries.filter((e) => e.package === 'shared-data@^1.0.0');
       expect(matches).toHaveLength(1);
     });
@@ -268,7 +268,7 @@ describe('Publisher', () => {
       });
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
-      const entries = pkgJson.npmdata as Array<{ package: string }>;
+      const entries = pkgJson.npmdata.sets as Array<{ package: string }>;
       expect(entries.some((e) => e.package === 'pkg-a')).toBe(true);
       expect(entries.some((e) => e.package === 'pkg-b')).toBe(true);
     });
@@ -282,7 +282,7 @@ describe('Publisher', () => {
       });
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
-      const entries = pkgJson.npmdata as Array<{ package: string }>;
+      const entries = pkgJson.npmdata.sets as Array<{ package: string }>;
       expect(entries.some((e) => e.package === '@my-org/shared-data@^2.0.0')).toBe(true);
       expect(pkgJson.dependencies['@my-org/shared-data']).toBe('^2.0.0');
     });
@@ -296,7 +296,7 @@ describe('Publisher', () => {
       expect(result.additionalPackages).toBeUndefined();
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
-      const entries = pkgJson.npmdata as Array<{ package: string; outputDir: string }>;
+      const entries = pkgJson.npmdata.sets as Array<{ package: string; outputDir: string }>;
       expect(Array.isArray(entries)).toBe(true);
       expect(entries).toHaveLength(1);
       expect(entries[0].package).toBe(pkgJson.name);
@@ -309,7 +309,7 @@ describe('Publisher', () => {
       await initPublisher(['docs/**'], { workingDir: tmpDir });
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
-      const entries = pkgJson.npmdata as Array<{ package: string; gitignore?: boolean }>;
+      const entries = pkgJson.npmdata.sets as Array<{ package: string; gitignore?: boolean }>;
       // eslint-disable-next-line no-restricted-syntax
       for (const entry of entries) {
         expect(entry.gitignore).toBeUndefined();
@@ -326,7 +326,7 @@ describe('Publisher', () => {
       });
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
-      const entries = pkgJson.npmdata as Array<{ package: string; gitignore?: boolean }>;
+      const entries = pkgJson.npmdata.sets as Array<{ package: string; gitignore?: boolean }>;
       // eslint-disable-next-line no-restricted-syntax
       for (const entry of entries) {
         expect(entry.gitignore).toBe(false);
@@ -343,7 +343,7 @@ describe('Publisher', () => {
       });
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
-      const entries = pkgJson.npmdata as Array<{ package: string; unmanaged?: boolean }>;
+      const entries = pkgJson.npmdata.sets as Array<{ package: string; unmanaged?: boolean }>;
       // eslint-disable-next-line no-restricted-syntax
       for (const entry of entries) {
         expect(entry.unmanaged).toBe(true);
@@ -356,7 +356,7 @@ describe('Publisher', () => {
       await initPublisher(['docs/**'], { workingDir: tmpDir, unmanaged: false });
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
-      const entries = pkgJson.npmdata as Array<{ package: string; unmanaged?: boolean }>;
+      const entries = pkgJson.npmdata.sets as Array<{ package: string; unmanaged?: boolean }>;
       // eslint-disable-next-line no-restricted-syntax
       for (const entry of entries) {
         expect(entry.unmanaged).toBeUndefined();

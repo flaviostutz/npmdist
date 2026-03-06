@@ -12,14 +12,13 @@ following order (starting from the current working directory):
 
 | Location | Format |
 |---|---|
-| `package.json` → `"npmdata"` key | JSON array of entries |
-| `.npmdatarc` | JSON or YAML array of entries |
-| `.npmdatarc.json` | JSON array of entries |
-| `.npmdatarc.yaml` / `.npmdatarc.yml` | YAML array of entries |
-| `npmdata.config.js` | CommonJS module exporting array |
+| `package.json` → `"npmdata"` key | JSON object with `"sets"` array |
+| `.npmdatarc` | JSON or YAML object with `"sets"` array |
+| `.npmdatarc.json` | JSON object with `"sets"` array |
+| `.npmdatarc.yaml` / `.npmdatarc.yml` | YAML object with `"sets"` array |
+| `npmdata.config.js` | CommonJS module exporting object with `sets` array |
 
-Each entry in the array is a `NpmdataExtractEntry` object, the same format used in the `"npmdata"`
-key of data packages published with `npmdata init`.
+Each entry in the `sets` array supports the same fields as a data-package `"npmdata.sets"` array entry.
 
 ## Configuration approaches
 
@@ -28,7 +27,23 @@ key of data packages published with `npmdata init`.
 ```json
 {
   "name": "my-project",
-  "npmdata": [
+  "npmdata": {
+    "sets": [
+      {
+        "package": "example-files-package",
+        "outputDir": "output",
+        "files": ["docs/**", "data/**"]
+      }
+    ]
+  }
+}
+```
+
+### Option B – .npmdatarc
+
+```json
+{
+  "sets": [
     {
       "package": "example-files-package",
       "outputDir": "output",
@@ -36,18 +51,6 @@ key of data packages published with `npmdata init`.
     }
   ]
 }
-```
-
-### Option B – .npmdatarc
-
-```json
-[
-  {
-    "package": "example-files-package",
-    "outputDir": "output",
-    "files": ["docs/**", "data/**"]
-  }
-]
 ```
 
 ## Running the example
@@ -77,7 +80,7 @@ from a temporary `.npmdatarc` file – to verify that both configuration sources
 
 ## Entry format reference
 
-Each entry supports the same fields as a data-package `"npmdata"` array entry:
+Each entry supports the same fields as a data-package `"npmdata.sets"` array entry:
 
 | Field | Type | Description |
 |---|---|---|

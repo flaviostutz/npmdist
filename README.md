@@ -29,18 +29,20 @@ Create a dedicated npm package whose `package.json` declares an `npmdata` config
 {
   "name": "my-org-data",
   "version": "1.0.0",
-  "npmdata": [
-    {
-      "package": "base-datasets@^3.0.0",
-      "outputDir": "./data/base",
-      "files": ["datasets/**"]
-    },
-    {
-      "package": "org-configs@^1.2.0",
-      "outputDir": "./configs",
-      "contentRegexes": ["env: production"]
-    }
-  ]
+  "npmdata": {
+    "sets": [
+      {
+        "package": "base-datasets@^3.0.0",
+        "outputDir": "./data/base",
+        "files": ["datasets/**"]
+      },
+      {
+        "package": "org-configs@^1.2.0",
+        "outputDir": "./configs",
+        "contentRegexes": ["env: production"]
+      }
+    ]
+  }
 }
 ```
 
@@ -65,7 +67,23 @@ Add an `npmdata` configuration directly to a project's own `package.json` (or a 
 ```json
 {
   "name": "my-project",
-  "npmdata": [
+  "npmdata": {
+    "sets": [
+      {
+        "package": "base-datasets@^3.0.0",
+        "outputDir": "./data",
+        "files": ["datasets/**"]
+      }
+    ]
+  }
+}
+```
+
+Or write a standalone `.npmdatarc` (JSON object at the top level):
+
+```json
+{
+  "sets": [
     {
       "package": "base-datasets@^3.0.0",
       "outputDir": "./data",
@@ -73,18 +91,6 @@ Add an `npmdata` configuration directly to a project's own `package.json` (or a 
     }
   ]
 }
-```
-
-Or write a standalone `.npmdatarc` (JSON array at the top level):
-
-```json
-[
-  {
-    "package": "base-datasets@^3.0.0",
-    "outputDir": "./data",
-    "files": ["datasets/**"]
-  }
-]
 ```
 
 Then run any command without `--packages`:
@@ -99,11 +105,11 @@ Config is resolved using [cosmiconfig](https://github.com/cosmiconfig/cosmiconfi
 
 | Source | Key / format |
 |---|---|
-| `package.json` | `"npmdata"` key |
-| `.npmdatarc` | JSON or YAML array |
-| `.npmdatarc.json` | JSON array |
-| `.npmdatarc.yaml` / `.npmdatarc.yml` | YAML array |
-| `npmdata.config.js` | CommonJS module exporting array |
+| `package.json` | `"npmdata"` key — object with `"sets"` array |
+| `.npmdatarc` | JSON or YAML object with `"sets"` array |
+| `.npmdatarc.json` | JSON object with `"sets"` array |
+| `.npmdatarc.yaml` / `.npmdatarc.yml` | YAML object with `"sets"` array |
+| `npmdata.config.js` | CommonJS module exporting object with `sets` array |
 
 All runner flags (`--dry-run`, `--silent`, `--verbose`, `--no-gitignore`, `--unmanaged`, `--tags`, `--output`) work as usual.
 
@@ -241,7 +247,7 @@ npx my-shared-assets --no-gitignore --unmanaged --dry-run
 
 ### npmdata entry options reference
 
-Each entry in the `npmdata` array in `package.json` supports the following options:
+Each entry in the `npmdata.sets` array in `package.json` supports the following options:
 
 | Option | Type | Default | Description |
 |---|---|---|---|

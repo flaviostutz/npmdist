@@ -15,33 +15,29 @@
     "package.json",
     "bin/npmdata.js"
   ],
-  "npmdata": [
-    {
-      "package": "example-files-package",
-      "outputDir": ".",
-      "files": [
-        "docs/**",
-        "data/**",
-        "conf/globals.js",
-        ".configs/**"
-      ],
-      "tags": [
-        "basic"
-      ]
-    },
-    {
-      "package": "eslint@8",
-      "outputDir": ".",
-      "files": [
-        "docs/**",
-        "data/**",
-        "conf/globals.js",
-        ".configs/**"
-      ],
-      "tags": [
-        "extra"
-      ]
-    }
-  ],
+  "npmdata": {
+    "sets": [
+      {
+        "package": "example-files-package",
+        "outputDir": ".",
+        "files": [
+          "docs/**",
+          "data/**",
+          "conf/globals.js",
+          ".configs/**"
+        ]
+      },
+      {
+        "package": "eslint@8",
+        "outputDir": ".",
+        "files": [
+          "docs/**",
+          "data/**",
+          "conf/globals.js",
+          ".configs/**"
+        ]
+      }
+    ]
+  },
   "bin": "bin/npmdata.js"
 }
