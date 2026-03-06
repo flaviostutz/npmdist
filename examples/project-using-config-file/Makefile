@@ -19,6 +19,7 @@ test:
 	test -e output/docs/adrs/adr-001-sample1.md
 	test -e output/data/users-dataset/user1.json
 	test -e output/eslint/conf/globals.js
+	test -e output/lastUpdated
 
 	# check without --packages: reads entries from package.json
 	pnpm exec npmdata check
@@ -39,6 +40,7 @@ test:
 	test -e output/docs/README.md
 	test -e output/data/users-dataset/user1.json
 	test -e output/eslint/conf/globals.js
+	test -e output/lastUpdated
 
 	pnpm exec npmdata check
 	test -e output/docs/README.md
@@ -57,12 +59,15 @@ test:
 	# basic-tagged entry (example-files-package docs and data) should be extracted
 	test -e output/docs/adrs/adr-001-sample1.md
 	test -e output/data/users-dataset/user1.json
+	# postExtractScript should run even when --tags is used
+	test -e output/lastUpdated
 	# extra-tagged entry (eslint) should not be extracted
 	test ! -e output/eslint/conf/globals.js
 	pnpm exec npmdata check --tags "basic"
 	pnpm exec npmdata purge --tags "basic"
 	test ! -e output/docs/adrs/adr-001-sample1.md
 	test ! -e output/data/users-dataset/user1.json
+	test -e output/lastUpdated
 
 	@echo "All config-file mode tests passed"
 

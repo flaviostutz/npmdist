@@ -12,7 +12,7 @@ import { cosmiconfig } from 'cosmiconfig';
 import { extract, check, list, purge } from './consumer';
 import { initPublisher } from './publisher';
 import { runEntries } from './runner';
-import { ConsumerConfig, NpmdataConfig, NpmdataExtractEntry, ProgressEvent } from './types';
+import { ConsumerConfig, NpmdataConfig, ProgressEvent } from './types';
 
 /**
  * CLI for npmdata
@@ -204,11 +204,17 @@ export async function cli(processArgs: string[], cliPath?: string): Promise<numb
     }
 
     if (!purgePackageSpecs) {
-      const configEntries = await loadNpmdataConfig();
+      const npmdataConfig = await loadNpmdataConfig();
       // eslint-disable-next-line no-undefined
-      if (configEntries !== undefined) {
+      if (npmdataConfig !== undefined) {
         const effectiveCliPath = cliPath ?? processArgs[1];
-        runEntries(configEntries, 'purge', processArgs, effectiveCliPath);
+        runEntries(
+          npmdataConfig.sets,
+          'purge',
+          processArgs,
+          effectiveCliPath,
+          npmdataConfig.postExtractScript,
+        );
         return 0;
       }
       console.error(`Error: --packages option is required for 'purge' command`);
@@ -327,11 +333,17 @@ export async function cli(processArgs: string[], cliPath?: string): Promise<numb
   }
 
   if (!packageSpecs) {
-    const configEntries = await loadNpmdataConfig();
+    const npmdataConfig = await loadNpmdataConfig();
     // eslint-disable-next-line no-undefined
-    if (configEntries !== undefined) {
+    if (npmdataConfig !== undefined) {
       const effectiveCliPath = cliPath ?? processArgs[1];
-      runEntries(configEntries, command, processArgs, effectiveCliPath);
+      runEntries(
+        npmdataConfig.sets,
+        command,
+        processArgs,
+        effectiveCliPath,
+        npmdataConfig.postExtractScript,
+      );
       return 0;
     }
     console.error(`Error: --packages option is required for '${command}' command`);
@@ -512,7 +524,7 @@ export async function cli(processArgs: string[], cliPath?: string): Promise<numb
  * The resolved value must be an object with a "sets" array of NpmdataExtractEntry objects.
  * Returns the sets array when found, or undefined when no configuration is present.
  */
-async function loadNpmdataConfig(): Promise<NpmdataExtractEntry[] | undefined> {
+async function loadNpmdataConfig(): Promise<NpmdataConfig | undefined> {
   const explorer = cosmiconfig('npmdata');
   const result = await explorer.search();
   if (!result || result.isEmpty) {
@@ -524,7 +536,7 @@ async function loadNpmdataConfig(): Promise<NpmdataExtractEntry[] | undefined> {
     // eslint-disable-next-line no-undefined
     return undefined;
   }
-  return cfg.sets as NpmdataExtractEntry[];
+  return cfg;
 }
 
 function printUsage(): void {

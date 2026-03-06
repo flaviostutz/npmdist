@@ -817,6 +817,7 @@ export function runEntries(
   action: string,
   argv: string[],
   cliPath: string,
+  postExtractScript?: string,
 ): void {
   const userArgs = argv.slice(2);
   const requestedTags = parseTagsFromArgv(argv);
@@ -851,6 +852,7 @@ export function runEntries(
         noGitignoreFromArgv,
         unmanagedFromArgv,
       );
+      runPostExtractScript(postExtractScript, userArgs, dryRunFromArgv, verboseFromArgv, runCwd);
     } else if (action === 'check') {
       runCheck(entries, cliPath, runCwd, verboseFromArgv, unmanagedFromArgv);
     } else if (action === 'list') {
@@ -865,6 +867,29 @@ export function runEntries(
     // eslint-disable-next-line unicorn/no-process-exit
     process.exit(status ?? 1);
   }
+}
+
+/**
+ * If a postExtractScript is defined in the npmdata config, run it with the same
+ * user arguments that were passed to the extract action.
+ * Skipped during dry-run. The script receives the full argv slice (action + flags)
+ * as appended arguments so it can inspect or react to them.
+ */
+function runPostExtractScript(
+  postExtractScript: string | undefined,
+  userArgs: string[],
+  dryRun: boolean,
+  verbose: boolean,
+  cwd: string,
+): void {
+  if (!postExtractScript || dryRun) return;
+  if (verbose) {
+    // eslint-disable-next-line no-console
+    console.log('[verbose] runner: running npmdata:postExtract script');
+  }
+  const scriptArgs = userArgs.join(' ');
+  const command = scriptArgs ? `${postExtractScript} ${scriptArgs}` : postExtractScript;
+  execSync(command, { stdio: 'inherit', cwd });
 }
 
 /**
@@ -933,6 +958,13 @@ export function run(binDir: string, argv: string[] = process.argv): void {
         verboseFromArgv,
         noGitignoreFromArgv,
         unmanagedFromArgv,
+      );
+      runPostExtractScript(
+        pkg.npmdata?.postExtractScript,
+        userArgs,
+        dryRunFromArgv,
+        verboseFromArgv,
+        runCwd,
       );
     } else if (action === 'check') {
       runCheck(entries, cliPath, runCwd, verboseFromArgv, unmanagedFromArgv);

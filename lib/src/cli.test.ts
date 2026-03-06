@@ -1236,6 +1236,8 @@ describe('CLI', () => {
         'extract',
         ['node', 'cli.js', 'extract'],
         '/fake/main.js',
+        // eslint-disable-next-line no-undefined
+        undefined,
       );
       expect(mockExtract).not.toHaveBeenCalled();
     });
@@ -1255,6 +1257,8 @@ describe('CLI', () => {
         'check',
         ['node', 'cli.js', 'check'],
         '/fake/main.js',
+        // eslint-disable-next-line no-undefined
+        undefined,
       );
       expect(mockCheck).not.toHaveBeenCalled();
     });
@@ -1274,6 +1278,8 @@ describe('CLI', () => {
         'purge',
         ['node', 'cli.js', 'purge'],
         '/fake/main.js',
+        // eslint-disable-next-line no-undefined
+        undefined,
       );
       expect(mockPurge).not.toHaveBeenCalled();
     });
@@ -1356,6 +1362,8 @@ describe('CLI', () => {
         'extract',
         expect.any(Array),
         '/path/to/main.js',
+        // eslint-disable-next-line no-undefined
+        undefined,
       );
     });
 
@@ -1370,7 +1378,34 @@ describe('CLI', () => {
       const exitCode = await cli(argv, '/fake/main.js');
 
       expect(exitCode).toBe(0);
-      expect(mockRunEntries).toHaveBeenCalledWith(sampleEntries, 'extract', argv, '/fake/main.js');
+      expect(mockRunEntries).toHaveBeenCalledWith(
+        sampleEntries,
+        'extract',
+        argv,
+        '/fake/main.js',
+        // eslint-disable-next-line no-undefined
+        undefined,
+      );
+    });
+
+    it('config-file mode passes postExtractScript from config to runEntries', async () => {
+      mockCosmicSearch.mockResolvedValue({
+        config: { sets: sampleEntries, postExtractScript: 'node myPost.js' },
+        filepath: '/project/package.json',
+        isEmpty: false,
+      });
+
+      const argv = ['node', 'cli.js', 'extract'];
+      const exitCode = await cli(argv, '/fake/main.js');
+
+      expect(exitCode).toBe(0);
+      expect(mockRunEntries).toHaveBeenCalledWith(
+        sampleEntries,
+        'extract',
+        argv,
+        '/fake/main.js',
+        'node myPost.js',
+      );
     });
   });
 });

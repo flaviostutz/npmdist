@@ -1,3 +1,4 @@
+/* eslint-disable no-undefined */
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -2744,6 +2745,181 @@ describe('runner', () => {
 
       expect(mockExit).toHaveBeenCalledWith(3);
       mockExit.mockRestore();
+    });
+  });
+
+  describe('run – postExtractScript config', () => {
+    it('runs postExtractScript after extract when defined in npmdata config', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: {
+          sets: [{ package: 'my-pkg', outputDir: '.' }],
+          postExtractScript: 'node postExtract.js',
+        },
+      });
+
+      run(BIN_DIR, EXTRACT_ARGV);
+
+      const commands = capturedCommands();
+      const postExtractCall = commands.at(-1);
+      expect(postExtractCall).toContain('node postExtract.js');
+    });
+
+    it('passes user args to the postExtractScript', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: {
+          sets: [{ package: 'my-pkg', outputDir: '.' }],
+          postExtractScript: 'node postExtract.js',
+        },
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'extract', '--verbose', '--output', '/some/dir']);
+
+      const commands = capturedCommands();
+      const postExtractCall = commands.at(-1);
+      expect(postExtractCall).toContain('node postExtract.js');
+      expect(postExtractCall).toContain('extract');
+      expect(postExtractCall).toContain('--verbose');
+      expect(postExtractCall).toContain('--output');
+      expect(postExtractCall).toContain('/some/dir');
+    });
+
+    it('does not run postExtractScript when it is not defined in config', () => {
+      setupPackageJson({ name: 'my-pkg' });
+
+      run(BIN_DIR, EXTRACT_ARGV);
+
+      // Only one call for the extract itself; no postExtract call
+      expect(mockExecSync).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not run postExtractScript during dry-run', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: {
+          sets: [{ package: 'my-pkg', outputDir: '.' }],
+          postExtractScript: 'node postExtract.js',
+        },
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'extract', '--dry-run']);
+
+      const commands = capturedCommands();
+      expect(commands.every((c) => !c.includes('postExtract.js'))).toBe(true);
+    });
+
+    it('does not run postExtractScript for non-extract actions', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: {
+          sets: [{ package: 'my-pkg', outputDir: '.' }],
+          postExtractScript: 'node postExtract.js',
+        },
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'check']);
+
+      const commands = capturedCommands();
+      expect(commands.every((c) => !c.includes('postExtract.js'))).toBe(true);
+    });
+
+    it('runs postExtractScript with cwd resolved from --output flag', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: {
+          sets: [{ package: 'my-pkg', outputDir: '.' }],
+          postExtractScript: 'node postExtract.js',
+        },
+      });
+
+      run(BIN_DIR, ['node', 'script.js', 'extract', '--output', '/custom/base']);
+
+      const { calls } = mockExecSync.mock;
+      const lastCall = calls.at(-1);
+      expect(lastCall).toBeDefined();
+      const lastCallOptions = lastCall![1] as { cwd?: string };
+      expect(lastCallOptions.cwd).toBe('/custom/base');
+    });
+
+    it('propagates exit code when postExtractScript fails', () => {
+      setupPackageJson({
+        name: 'my-pkg',
+        npmdata: {
+          sets: [{ package: 'my-pkg', outputDir: '.' }],
+          postExtractScript: 'node postExtract.js',
+        },
+      });
+      // First call (extract) succeeds (default mock returns undefined),
+      // second call (postExtract) throws with a non-zero exit code.
+      mockExecSync
+        .mockImplementationOnce(() => undefined as unknown as ReturnType<typeof execSync>)
+        .mockImplementationOnce(() => {
+          throw Object.assign(new Error('postExtract failed'), { status: 5 });
+        });
+
+      const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('process.exit called');
+      });
+      expect(() => run(BIN_DIR, EXTRACT_ARGV)).toThrow('process.exit called');
+      expect(mockExit).toHaveBeenCalledWith(5);
+      mockExit.mockRestore();
+    });
+  });
+
+  describe('runEntries \u2013 postExtractScript', () => {
+    const CLI_PATH = '/fake/npmdata/dist/main.js';
+    const entries: NpmdataExtractEntry[] = [{ package: 'pkg-a', outputDir: './a' }];
+
+    it('runs postExtractScript after extract when provided', () => {
+      runEntries(entries, 'extract', ['node', 'script.js', 'extract'], CLI_PATH, 'node post.js');
+
+      const commands = capturedCommands();
+      expect(commands.some((c) => c.includes('node post.js'))).toBe(true);
+    });
+
+    it('passes user args to postExtractScript', () => {
+      runEntries(
+        entries,
+        'extract',
+        ['node', 'script.js', 'extract', '--verbose'],
+        CLI_PATH,
+        'node post.js',
+      );
+
+      const commands = capturedCommands();
+      const postCall = commands.at(-1);
+      expect(postCall).toContain('node post.js');
+      expect(postCall).toContain('--verbose');
+    });
+
+    it('does not run postExtractScript when not provided', () => {
+      runEntries(entries, 'extract', ['node', 'script.js', 'extract'], CLI_PATH);
+
+      expect(mockExecSync).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not run postExtractScript during dry-run', () => {
+      runEntries(
+        entries,
+        'extract',
+        ['node', 'script.js', 'extract', '--dry-run'],
+        CLI_PATH,
+        'node post.js',
+      );
+
+      const commands = capturedCommands();
+      expect(commands.every((c) => !c.includes('node post.js'))).toBe(true);
+    });
+
+    it('does not run postExtractScript for non-extract actions', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      mockExecSync.mockReturnValue('Purge complete: 0 deleted\n' as any);
+
+      runEntries(entries, 'purge', ['node', 'script.js', 'purge'], CLI_PATH, 'node post.js');
+
+      const commands = capturedCommands();
+      expect(commands.every((c) => !c.includes('node post.js'))).toBe(true);
     });
   });
 });

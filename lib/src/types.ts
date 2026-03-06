@@ -360,6 +360,15 @@ export type NpmdataConfig = {
    * The list of extraction entries to process.
    */
   sets: NpmdataExtractEntry[];
+
+  /**
+   * Shell command to run after a successful extract action.
+   * The full argv (action + flags) used during extraction is appended as
+   * arguments so the script can inspect or react to them.
+   * Skipped during dry-run.
+   * Example: "node scripts/myPostExtract.js"
+   */
+  postExtractScript?: string;
 };
 
 /**
