@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.11.0 (2026-03-05)
+
+### Features
+
+* release extract from config [[4785cfe](https://github.com/flaviostutz/npmdata/commit/4785cfee6e205d9ffcb6e15b68f446d1410440f0)]
+
+### Maintenance
+
+* add support for local config file for npmdata cli [[0f1a487](https://github.com/flaviostutz/npmdata/commit/0f1a48794dc3050e1085a24caa22212e915c0ee5)]
+* change npmdata config [[c2e2f4e](https://github.com/flaviostutz/npmdata/commit/c2e2f4e11102a259034a2c0ff768cc685db0b589)]
+* skip unmanaged entries during check [[d3a466a](https://github.com/flaviostutz/npmdata/commit/d3a466a394433b68c0c43885bebc674f9b54b0f6)]
+
+### Info
+
+* Authors: Flavio Stutz <flaviostutz@gmail.com>
+
+
 ## 0.10.3 (2026-03-05)
 
 ### Maintenance
