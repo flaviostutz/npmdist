@@ -27,20 +27,22 @@ function buildExtractCommand(
   entry: NpmdataExtractEntry,
   cwd: string = process.cwd(),
 ): string {
-  const outputFlag = ` --output "${path.resolve(cwd, entry.outputDir)}"`;
-  const forceFlag = entry.force ? ' --force' : '';
-  const keepExistingFlag = entry.keepExisting ? ' --keep-existing' : '';
-  const gitignoreFlag = entry.gitignore === false ? ' --no-gitignore' : '';
-  const unmanagedFlag = entry.unmanaged ? ' --unmanaged' : '';
+  const outputFlag = ` --output "${path.resolve(cwd, entry.output.path)}"`;
+  const forceFlag = entry.output?.force ? ' --force' : '';
+  const keepExistingFlag = entry.output?.keepExisting ? ' --keep-existing' : '';
+  const gitignoreFlag = entry.output?.gitignore === false ? ' --no-gitignore' : '';
+  const unmanagedFlag = entry.output?.unmanaged ? ' --unmanaged' : '';
   const silentFlag = entry.silent ? ' --silent' : '';
   const verboseFlag = entry.verbose ? ' --verbose' : '';
-  const dryRunFlag = entry.dryRun ? ' --dry-run' : '';
+  const dryRunFlag = entry.output?.dryRun ? ' --dry-run' : '';
   const upgradeFlag = entry.upgrade ? ' --upgrade' : '';
   const filesFlag =
-    entry.files && entry.files.length > 0 ? ` --files "${entry.files.join(',')}"` : '';
+    entry.selector?.files && entry.selector.files.length > 0
+      ? ` --files "${entry.selector.files.join(',')}"`
+      : '';
   const contentRegexFlag =
-    entry.contentRegexes && entry.contentRegexes.length > 0
-      ? ` --content-regex "${entry.contentRegexes.join(',')}"`
+    entry.selector?.contentRegexes && entry.selector.contentRegexes.length > 0
+      ? ` --content-regex "${entry.selector.contentRegexes.join(',')}"`
       : '';
   return `node "${cliPath}" extract --packages "${entry.package}"${outputFlag}${forceFlag}${keepExistingFlag}${gitignoreFlag}${unmanagedFlag}${silentFlag}${verboseFlag}${dryRunFlag}${upgradeFlag}${filesFlag}${contentRegexFlag}`;
 }
@@ -53,13 +55,15 @@ export function buildCheckCommand(
   entry: NpmdataExtractEntry,
   cwd: string = process.cwd(),
 ): string {
-  const outputFlag = ` --output "${path.resolve(cwd, entry.outputDir)}"`;
+  const outputFlag = ` --output "${path.resolve(cwd, entry.output.path)}"`;
   const verboseFlag = entry.verbose ? ' --verbose' : '';
   const filesFlag =
-    entry.files && entry.files.length > 0 ? ` --files "${entry.files.join(',')}"` : '';
+    entry.selector?.files && entry.selector.files.length > 0
+      ? ` --files "${entry.selector.files.join(',')}"`
+      : '';
   const contentRegexFlag =
-    entry.contentRegexes && entry.contentRegexes.length > 0
-      ? ` --content-regex "${entry.contentRegexes.join(',')}"`
+    entry.selector?.contentRegexes && entry.selector.contentRegexes.length > 0
+      ? ` --content-regex "${entry.selector.contentRegexes.join(',')}"`
       : '';
   return `node "${cliPath}" check --packages "${entry.package}"${outputFlag}${verboseFlag}${filesFlag}${contentRegexFlag}`;
 }
@@ -88,11 +92,11 @@ export function buildPurgeCommand(
   cwd: string = process.cwd(),
 ): string {
   const { name } = parseEntryPackageName(entry.package);
-  const outputFlag = ` --output "${path.resolve(cwd, entry.outputDir)}"`;
+  const outputFlag = ` --output "${path.resolve(cwd, entry.output.path)}"`;
   // Propagate silent/dry-run/verbose settings from the entry if present.
   const silentFlag = entry.silent ? ' --silent' : '';
   const verboseFlag = entry.verbose ? ' --verbose' : '';
-  const dryRunFlag = entry.dryRun ? ' --dry-run' : '';
+  const dryRunFlag = entry.output?.dryRun ? ' --dry-run' : '';
   return `node "${cliPath}" purge --packages "${name}"${outputFlag}${silentFlag}${verboseFlag}${dryRunFlag}`;
 }
 
@@ -380,13 +384,13 @@ function symlinkAction(
  * symlinks in the target directory are left untouched.
  */
 export function applySymlinks(entry: NpmdataExtractEntry, cwd: string = process.cwd()): void {
-  if (!entry.symlinks || entry.symlinks.length === 0) return;
+  if (!entry.output?.symlinks || entry.output.symlinks.length === 0) return;
 
-  const outputDir = path.resolve(cwd, entry.outputDir);
+  const outputDir = path.resolve(cwd, entry.output.path);
   const allManagedPaths = managedPathsWithAncestors(readManagedFiles(outputDir));
 
-  for (const cfg of entry.symlinks) {
-    const targetDir = path.resolve(cwd, cfg.target);
+  for (const cfg of entry.output.symlinks!) {
+    const targetDir = path.resolve(outputDir, cfg.target);
     fs.mkdirSync(targetDir, { recursive: true });
 
     // Build desired symlink map from managed paths (files + ancestor dirs) matching the source pattern.
@@ -448,12 +452,12 @@ export function applyContentReplacements(
   entry: NpmdataExtractEntry,
   cwd: string = process.cwd(),
 ): void {
-  if (!entry.contentReplacements || entry.contentReplacements.length === 0) return;
+  if (!entry.output?.contentReplacements || entry.output.contentReplacements.length === 0) return;
 
-  const outputDir = path.resolve(cwd, entry.outputDir);
+  const outputDir = path.resolve(cwd, entry.output.path);
   const managedFiles = readManagedFiles(outputDir);
 
-  for (const cfg of entry.contentReplacements) {
+  for (const cfg of entry.output.contentReplacements) {
     const regex = new RegExp(cfg.match, 'gm');
     for (const mf of managedFiles) {
       if (minimatch(mf.path, cfg.files, { dot: true })) {
@@ -462,7 +466,11 @@ export function applyContentReplacements(
           const original = fs.readFileSync(filePath, 'utf8');
           const updated = original.replace(regex, cfg.replace);
           if (updated !== original) {
+            // Files extracted by npmdata are set to read-only (0o444).
+            // Temporarily make the file writable, apply the replacement, then restore read-only.
+            fs.chmodSync(filePath, 0o644);
             fs.writeFileSync(filePath, updated, 'utf8');
+            fs.chmodSync(filePath, 0o444);
           }
         }
       }
@@ -482,13 +490,14 @@ export function checkContentReplacements(
   entry: NpmdataExtractEntry,
   cwd: string = process.cwd(),
 ): string[] {
-  if (!entry.contentReplacements || entry.contentReplacements.length === 0) return [];
+  if (!entry.output?.contentReplacements || entry.output.contentReplacements.length === 0)
+    return [];
 
-  const outputDir = path.resolve(cwd, entry.outputDir);
+  const outputDir = path.resolve(cwd, entry.output.path);
   const managedFiles = readManagedFiles(outputDir);
   const outOfSync: string[] = [];
 
-  for (const cfg of entry.contentReplacements) {
+  for (const cfg of entry.output.contentReplacements) {
     const regex = new RegExp(cfg.match, 'gm');
     for (const mf of managedFiles) {
       if (minimatch(mf.path, cfg.files, { dot: true })) {
@@ -574,17 +583,22 @@ function runExtract(
     entryIndex += 1;
     const effectiveEntry: NpmdataExtractEntry = {
       ...entry,
-      dryRun: entry.dryRun || dryRunFromArgv,
+      output: {
+        ...entry.output,
+        dryRun: entry.output?.dryRun || dryRunFromArgv,
+        ...(noGitignoreFromArgv ? { gitignore: false } : {}),
+        ...(unmanagedFromArgv ? { unmanaged: true } : {}),
+      },
       silent: effectiveSilent,
       verbose: entry.verbose || verboseFromArgv,
-      ...(noGitignoreFromArgv ? { gitignore: false } : {}),
-      ...(unmanagedFromArgv ? { unmanaged: true } : {}),
     };
     if (verboseFromArgv) {
       // eslint-disable-next-line no-console
-      console.log(`[verbose] extract: entry package=${entry.package} outputDir=${entry.outputDir}`);
+      console.log(
+        `[verbose] extract: entry package=${entry.package} outputDir=${entry.output.path}`,
+      );
     }
-    fs.mkdirSync(path.resolve(runCwd, entry.outputDir), { recursive: true });
+    fs.mkdirSync(path.resolve(runCwd, entry.output.path), { recursive: true });
     const command = buildExtractCommand(cliPath, effectiveEntry, runCwd);
     if (verboseFromArgv) {
       // eslint-disable-next-line no-console
@@ -603,7 +617,7 @@ function runExtract(
       totalDeleted += Number.parseInt(extractMatch[3], 10);
       totalSkipped += Number.parseInt(extractMatch[4], 10);
     }
-    if (!effectiveEntry.dryRun) {
+    if (!effectiveEntry.output?.dryRun) {
       if (verboseFromArgv) {
         // eslint-disable-next-line no-console
         console.log(`[verbose] extract: applying symlinks for ${entry.package}`);
@@ -627,7 +641,10 @@ function runExtract(
     }
     const effectiveEntry: NpmdataExtractEntry = {
       ...entry,
-      dryRun: entry.dryRun || dryRunFromArgv,
+      output: {
+        ...entry.output,
+        dryRun: entry.output?.dryRun || dryRunFromArgv,
+      },
       silent: true,
     };
     const command = buildPurgeCommand(cliPath, effectiveEntry, runCwd);
@@ -649,11 +666,11 @@ function runCheck(
   unmanagedFromArgv: boolean,
 ): void {
   const managedEntries = entries.filter((entry) => {
-    const isUnmanaged = entry.unmanaged || unmanagedFromArgv;
+    const isUnmanaged = entry.output?.unmanaged || unmanagedFromArgv;
     if (isUnmanaged && verboseFromArgv) {
       // eslint-disable-next-line no-console
       console.log(
-        `[verbose] check: skipping unmanaged entry package=${entry.package} outputDir=${entry.outputDir}`,
+        `[verbose] check: skipping unmanaged entry package=${entry.package} outputDir=${entry.output.path}`,
       );
     }
     return !isUnmanaged;
@@ -676,7 +693,7 @@ function runCheck(
     if (verboseFromArgv) {
       // eslint-disable-next-line no-console
       console.log(
-        `[verbose] check: checking package=${entry.package} outputDir=${entry.outputDir}`,
+        `[verbose] check: checking package=${entry.package} outputDir=${entry.output.path}`,
       );
     }
     const effectiveEntry: NpmdataExtractEntry = {
@@ -726,14 +743,14 @@ function runList(
     );
   }
   for (const entry of allEntries) {
-    const resolvedDir = path.resolve(runCwd, entry.outputDir);
+    const resolvedDir = path.resolve(runCwd, entry.output.path);
     if (!seenDirs.has(resolvedDir)) {
       seenDirs.add(resolvedDir);
       if (verboseFromArgv) {
         // eslint-disable-next-line no-console
         console.log(`[verbose] list: scanning directory ${resolvedDir}`);
       }
-      const command = buildListCommand(cliPath, entry.outputDir, runCwd, verboseFromArgv);
+      const command = buildListCommand(cliPath, entry.output.path, runCwd, verboseFromArgv);
       execSync(command, { stdio: 'inherit', cwd: runCwd });
     }
   }
@@ -766,13 +783,16 @@ function runPurge(
     purgeIndex += 1;
     const effectiveEntry: NpmdataExtractEntry = {
       ...entry,
-      dryRun: entry.dryRun || dryRunFromArgv,
+      output: {
+        ...entry.output,
+        dryRun: entry.output?.dryRun || dryRunFromArgv,
+      },
       silent: effectiveSilent,
       verbose: entry.verbose || verboseFromArgv,
     };
     if (verboseFromArgv) {
       // eslint-disable-next-line no-console
-      console.log(`[verbose] purge: entry package=${entry.package} outputDir=${entry.outputDir}`);
+      console.log(`[verbose] purge: entry package=${entry.package} outputDir=${entry.output.path}`);
     }
     const command = buildPurgeCommand(cliPath, effectiveEntry, runCwd);
     if (verboseFromArgv) {
@@ -787,7 +807,7 @@ function runPurge(
     if (purgeMatch) {
       totalDeleted += Number.parseInt(purgeMatch[1], 10);
     }
-    if (!effectiveEntry.dryRun) {
+    if (!effectiveEntry.output?.dryRun) {
       if (verboseFromArgv) {
         // eslint-disable-next-line no-console
         console.log(`[verbose] purge: cleaning up symlinks for ${entry.package}`);
@@ -908,7 +928,7 @@ export function run(binDir: string, argv: string[] = process.argv): void {
   const allEntries: NpmdataExtractEntry[] =
     pkg.npmdata?.sets && pkg.npmdata.sets.length > 0
       ? pkg.npmdata.sets
-      : [{ package: pkg.name, outputDir: '.' }];
+      : [{ package: pkg.name, output: { path: '.' } }];
 
   const userArgs = argv.slice(2);
 

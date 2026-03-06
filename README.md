@@ -33,13 +33,13 @@ Create a dedicated npm package whose `package.json` declares an `npmdata` config
     "sets": [
       {
         "package": "base-datasets@^3.0.0",
-        "outputDir": "./data/base",
-        "files": ["datasets/**"]
+        "selector": { "files": ["datasets/**"] },
+        "output": { "path": "./data/base" }
       },
       {
         "package": "org-configs@^1.2.0",
-        "outputDir": "./configs",
-        "contentRegexes": ["env: production"]
+        "selector": { "contentRegexes": ["env: production"] },
+        "output": { "path": "./configs" }
       }
     ]
   }
@@ -71,8 +71,8 @@ Add an `npmdata` configuration directly to a project's own `package.json` (or a 
     "sets": [
       {
         "package": "base-datasets@^3.0.0",
-        "outputDir": "./data",
-        "files": ["datasets/**"]
+        "selector": { "files": ["datasets/**"] },
+        "output": { "path": "./data" }
       }
     ]
   }
@@ -86,8 +86,8 @@ Or write a standalone `.npmdatarc` (JSON object at the top level):
   "sets": [
     {
       "package": "base-datasets@^3.0.0",
-      "outputDir": "./data",
-      "files": ["datasets/**"]
+      "selector": { "files": ["datasets/**"] },
+      "output": { "path": "./data" }
     }
   ]
 }
@@ -215,8 +215,8 @@ To use presets, add a `presets` array to each `npmdata` entry in the data packag
 {
   "npmdata": {
     "sets": [
-      { "package": "my-shared-assets", "outputDir": "./data", "presets": ["prod"] },
-      { "package": "my-dev-assets",    "outputDir": "./dev-data", "presets": ["dev", "staging"] }
+      { "package": "my-shared-assets", "output": { "path": "./data" }, "presets": ["prod"] },
+      { "package": "my-dev-assets",    "output": { "path": "./dev-data" }, "presets": ["dev", "staging"] }
     ]
   }
 }
@@ -230,7 +230,7 @@ When calling the bin script bundled in a data package, the following options are
 
 | Option | Description |
 |---|---|
-| `--output, -o <dir>` | Base directory for resolving all `outputDir` paths (default: cwd). |
+| `--output, -o <dir>` | Base directory for resolving all `output.path` values (default: cwd). |
 | `--presets <preset1,preset2>` | Limit to entries whose `presets` overlap with the given list (comma-separated). |
 | `--no-gitignore` | Disable `.gitignore` management for every entry, overriding each entry's `gitignore` field. |
 | `--unmanaged` | Run every entry in unmanaged mode, overriding each entry's `unmanaged` field. Files are written without a `.npmdata` marker, without `.gitignore` updates, and without being made read-only. |
@@ -255,27 +255,27 @@ Each entry in the `npmdata.sets` array in `package.json` supports the following 
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `package` | `string` | required | Package spec to install and extract. Either a bare name (`my-pkg`) or with a semver constraint (`my-pkg@^1.2.3`). |
-| `outputDir` | `string` | required | Directory where files will be extracted, relative to where the consumer runs the command. |
-| `files` | `string[]` | all files | Glob patterns to filter which files are extracted (e.g. `["data/**", "*.json"]`). |
-| `contentRegexes` | `string[]` | none | Regex patterns (as strings) to filter files by content. Only files matching at least one pattern are extracted. |
-| `force` | `boolean` | `false` | Allow overwriting existing unmanaged files or files owned by a different package. |
-| `keepExisting` | `boolean` | `false` | Skip files that already exist but create them when absent. Cannot be combined with `force`. |
-| `gitignore` | `boolean` | `true` | Create/update a `.gitignore` file alongside each `.npmdata` marker file. Set to `false` to disable. |
-| `unmanaged` | `boolean` | `false` | Write files without a `.npmdata` marker, `.gitignore` update, or read-only flag. Existing files are skipped. |
-| `dryRun` | `boolean` | `false` | Simulate extraction without writing anything to disk. |
+| `output.path` | `string` | required | Directory where files will be extracted, relative to where the consumer runs the command. |
+| `selector.files` | `string[]` | all files | Glob patterns to filter which files are extracted (e.g. `["data/**", "*.json"]`). |
+| `selector.contentRegexes` | `string[]` | none | Regex patterns (as strings) to filter files by content. Only files matching at least one pattern are extracted. |
+| `output.force` | `boolean` | `false` | Allow overwriting existing unmanaged files or files owned by a different package. |
+| `output.keepExisting` | `boolean` | `false` | Skip files that already exist but create them when absent. Cannot be combined with `force`. |
+| `output.gitignore` | `boolean` | `true` | Create/update a `.gitignore` file alongside each `.npmdata` marker file. Set to `false` to disable. |
+| `output.unmanaged` | `boolean` | `false` | Write files without a `.npmdata` marker, `.gitignore` update, or read-only flag. Existing files are skipped. |
+| `output.dryRun` | `boolean` | `false` | Simulate extraction without writing anything to disk. |
 | `upgrade` | `boolean` | `false` | Force a fresh install of the package even when a satisfying version is already installed. |
 | `silent` | `boolean` | `false` | Suppress per-file output, printing only the final result line. |
 | `presets` | `string[]` | none | Presets used to group and selectively run entries with `--presets`. |
-| `symlinks` | `SymlinkConfig[]` | none | Post-extract symlink operations (see below). |
-| `contentReplacements` | `ContentReplacementConfig[]` | none | Post-extract content-replacement operations (see below). |
+| `output.symlinks` | `SymlinkConfig[]` | none | Post-extract symlink operations (see below). |
+| `output.contentReplacements` | `ContentReplacementConfig[]` | none | Post-extract content-replacement operations (see below). |
 
 #### SymlinkConfig
 
-After extraction, for each config the runner resolves all files/directories inside `outputDir` that match `source` and creates a corresponding symlink inside `target`. Stale symlinks pointing into `outputDir` but no longer matched are removed automatically.
+After extraction, for each config the runner resolves all files/directories inside `output.path` that match `source` and creates a corresponding symlink inside `target`. Stale symlinks pointing into `output.path` but no longer matched are removed automatically.
 
 | Field | Type | Description |
 |---|---|---|
-| `source` | `string` | Glob pattern relative to `outputDir`. Every matching file or directory gets a symlink in `target`. Example: `"**\/skills\/**"` |
+| `source` | `string` | Glob pattern relative to `output.path`. Every matching file or directory gets a symlink in `target`. Example: `"**\/skills\/**"` |
 | `target` | `string` | Directory where symlinks are created, relative to the project root. Example: `".github/skills"` |
 
 #### ContentReplacementConfig
@@ -295,17 +295,21 @@ Example with multiple options:
   "npmdata": [
     {
       "package": "my-shared-assets@^2.0.0",
-      "outputDir": "./data",
-      "files": ["docs/**", "configs/*.json"],
-      "gitignore": true,
+      "selector": {
+        "files": ["docs/**", "configs/*.json"]
+      },
+      "output": {
+        "path": "./data",
+        "gitignore": true,
+        "symlinks": [
+          { "source": "**\/skills\/**", "target": ".github/skills" }
+        ],
+        "contentReplacements": [
+          { "files": "docs/**\/*.md", "match": "<!-- version: .* -->", "replace": "<!-- version: 2.0.0 -->" }
+        ]
+      },
       "upgrade": true,
-      "presets": ["prod"],
-      "symlinks": [
-        { "source": "**\/skills\/**", "target": ".github/skills" }
-      ],
-      "contentReplacements": [
-        { "files": "docs/**\/*.md", "match": "<!-- version: .* -->", "replace": "<!-- version: 2.0.0 -->" }
-      ]
+      "presets": ["prod"]
     }
   ]
 }

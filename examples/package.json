@@ -19,23 +19,31 @@
     "sets": [
       {
         "package": "example-files-package",
-        "outputDir": ".",
-        "files": [
-          "docs/**",
-          "data/**",
-          "conf/globals.js",
-          ".configs/**"
-        ]
+        "output": {
+          "path": "."
+        },
+        "selector": {
+          "files": [
+            "docs/**",
+            "data/**",
+            "conf/globals.js",
+            ".configs/**"
+          ]
+        }
       },
       {
         "package": "eslint@8",
-        "outputDir": ".",
-        "files": [
-          "docs/**",
-          "data/**",
-          "conf/globals.js",
-          ".configs/**"
-        ]
+        "output": {
+          "path": "."
+        },
+        "selector": {
+          "files": [
+            "docs/**",
+            "data/**",
+            "conf/globals.js",
+            ".configs/**"
+          ]
+        }
       }
     ]
   },

@@ -12,22 +12,52 @@
     "sets": [
       {
         "package": "example-files-package",
-        "outputDir": "output",
-        "files": [
-          "docs/**",
-          "data/**"
-        ],
+        "upgrade": false,
+        "selector": {
+          "files": [
+            "docs/**",
+            "data/**"
+          ],
+          "contentRegexes": [
+            ".*"
+          ]
+        },
+        "output": {
+          "path": "output",
+          "force": false,
+          "keepExisting": true,
+          "gitignore": true,
+          "unmanaged": false,
+          "dryRun": false,
+          "symlinks": [
+            {
+              "source": "data/**",
+              "target": "data-symlink/"
+            }
+          ],
+          "contentReplacements": [
+            {
+              "files": "docs/**",
+              "match": "exampleTODOTESTCHECKLATER",
+              "replace": "sample"
+            }
+          ]
+        },
         "presets": [
           "basic"
         ]
       },
       {
         "package": "eslint@8",
-        "outputDir": "output/eslint",
-        "files": [
-          "conf/globals.js"
-        ],
-        "unmanaged": true,
+        "selector": {
+          "files": [
+            "conf/globals.js"
+          ]
+        },
+        "output": {
+          "path": "output/eslint",
+          "unmanaged": true
+        },
         "presets": [
           "extra"
         ]

@@ -25,9 +25,9 @@ export type SymlinkConfig = {
   source: string;
 
   /**
-   * Directory where the symlinks will be created, relative to the working
-   * directory in which the runner is invoked (i.e. the consumer's project root).
-   * Example: ".github/skills"
+   * Directory where the symlinks will be created, relative to the output
+   * directory. Supports relative paths (e.g. "../sibling-dir").
+   * Example: "links/skills" creates symlinks at <outputDir>/links/skills
    */
   target: string;
 };
@@ -257,27 +257,31 @@ export type CheckResult = {
 };
 
 /**
- * A single extraction entry defined in the publishable package.json "npmdata" array.
- * The runner iterates over these entries and calls extract() for each one.
+ * Configuration for selecting which files to extract from a package.
  */
-export type NpmdataExtractEntry = {
-  /**
-   * Package spec to install and extract from. Either a bare name ("my-pkg") or a
-   * name with a semver constraint ("my-pkg@^1.2.3").
-   */
-  package: string;
-
-  /**
-   * Output directory where files will be extracted, relative to where the consumer
-   * runs the command (e.g. "./data" or "src/generated").
-   */
-  outputDir: string;
-
+export type SelectorConfig = {
   /**
    * Glob patterns to filter which files are extracted (e.g. ["data/**", "*.json"]).
    * Defaults to all files when not set.
    */
   files?: string[];
+
+  /**
+   * Regex patterns (as strings) to filter files by content. Only files whose content
+   * matches at least one pattern are extracted.
+   */
+  contentRegexes?: string[];
+};
+
+/**
+ * Output configuration for an extraction entry: where and how to write extracted files.
+ */
+export type OutputConfig = {
+  /**
+   * Output directory where files will be extracted, relative to where the consumer
+   * runs the command (e.g. "./data" or "src/generated").
+   */
+  path: string;
 
   /**
    * Allow overwriting existing unmanaged files (default: false).
@@ -307,6 +311,43 @@ export type NpmdataExtractEntry = {
   dryRun?: boolean;
 
   /**
+   * Post-extract symlink operations. After extraction, for each config the runner
+   * resolves all files/directories inside outputDir that match the source glob and
+   * creates a corresponding symlink inside the target directory. Stale symlinks
+   * (pointing into outputDir but no longer matched) are removed automatically.
+   */
+  symlinks?: SymlinkConfig[];
+
+  /**
+   * Post-extract content-replacement operations. After extraction, for each config
+   * the runner finds workspace files matching the files glob and applies the regex
+   * replacement to their contents.
+   */
+  contentReplacements?: ContentReplacementConfig[];
+};
+
+/**
+ * A single extraction entry defined in the publishable package.json "npmdata" array.
+ * The runner iterates over these entries and calls extract() for each one.
+ */
+export type NpmdataExtractEntry = {
+  /**
+   * Package spec to install and extract from. Either a bare name ("my-pkg") or a
+   * name with a semver constraint ("my-pkg@^1.2.3").
+   */
+  package: string;
+
+  /**
+   * Output configuration: where to extract files and how.
+   */
+  output: OutputConfig;
+
+  /**
+   * File selection configuration: which files to extract from the package.
+   */
+  selector?: SelectorConfig;
+
+  /**
    * Force a fresh install of the package even when a satisfying version is already
    * installed (default: false).
    */
@@ -323,32 +364,11 @@ export type NpmdataExtractEntry = {
   verbose?: boolean;
 
   /**
-   * Regex patterns (as strings) to filter files by content. Only files whose content
-   * matches at least one pattern are extracted.
-   */
-  contentRegexes?: string[];
-
-  /**
    * Presets used to group and selectively run entries. When the data package is invoked with
    * --presets, only entries whose presets list includes at least one of the requested presets are
    * processed. Entries with no presets are always skipped when a preset filter is active.
    */
   presets?: string[];
-
-  /**
-   * Post-extract symlink operations. After extraction, for each config the runner
-   * resolves all files/directories inside outputDir that match the source glob and
-   * creates a corresponding symlink inside the target directory. Stale symlinks
-   * (pointing into outputDir but no longer matched) are removed automatically.
-   */
-  symlinks?: SymlinkConfig[];
-
-  /**
-   * Post-extract content-replacement operations. After extraction, for each config
-   * the runner finds workspace files matching the files glob and applies the regex
-   * replacement to their contents.
-   */
-  contentReplacements?: ContentReplacementConfig[];
 };
 
 /**

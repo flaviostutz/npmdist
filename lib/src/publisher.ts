@@ -123,19 +123,19 @@ function preparePackageJson(
     return name === mainName;
   });
   if (!hasMainEntry) {
-    existingEntries.push({ package: mainName, outputDir: '.' });
+    existingEntries.push({ package: mainName, output: { path: '.' } });
   }
 
   // Set file glob patterns and gitignore on all npmdata entries
   for (const entry of existingEntries) {
-    entry.files = fileGlobs;
+    entry.selector = { ...entry.selector, files: fileGlobs };
     if (!gitignore) {
-      entry.gitignore = false;
+      entry.output = { ...entry.output, gitignore: false };
     } else {
-      delete entry.gitignore;
+      delete entry.output.gitignore;
     }
     if (unmanaged) {
-      entry.unmanaged = true;
+      entry.output = { ...entry.output, unmanaged: true };
     }
   }
 
@@ -149,10 +149,12 @@ function preparePackageJson(
     if (!alreadyPresent) {
       existingEntries.push({
         package: pkgSpec,
-        outputDir: '.',
-        files: fileGlobs,
-        ...(!gitignore ? { gitignore: false } : {}),
-        ...(unmanaged ? { unmanaged: true } : {}),
+        output: {
+          path: '.',
+          ...(!gitignore ? { gitignore: false } : {}),
+          ...(unmanaged ? { unmanaged: true } : {}),
+        },
+        selector: { files: fileGlobs },
       });
     }
     if (!packageJson.dependencies[pkgName]) {

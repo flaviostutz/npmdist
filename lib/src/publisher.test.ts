@@ -64,11 +64,14 @@ describe('Publisher', () => {
       await initPublisher(['docs/**', 'configs/*.json'], { workingDir: tmpDir });
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
-      const entries = pkgJson.npmdata.sets as Array<{ package: string; files: string[] }>;
+      const entries = pkgJson.npmdata.sets as Array<{
+        package: string;
+        selector?: { files?: string[] };
+      }>;
       // eslint-disable-next-line no-restricted-syntax
       for (const entry of entries) {
-        expect(entry.files).toContain('docs/**');
-        expect(entry.files).toContain('configs/*.json');
+        expect(entry.selector?.files).toContain('docs/**');
+        expect(entry.selector?.files).toContain('configs/*.json');
       }
     });
 
@@ -296,11 +299,11 @@ describe('Publisher', () => {
       expect(result.additionalPackages).toBeUndefined();
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
-      const entries = pkgJson.npmdata.sets as Array<{ package: string; outputDir: string }>;
+      const entries = pkgJson.npmdata.sets as Array<{ package: string; output: { path: string } }>;
       expect(Array.isArray(entries)).toBe(true);
       expect(entries).toHaveLength(1);
       expect(entries[0].package).toBe(pkgJson.name);
-      expect(entries[0].outputDir).toBe('.');
+      expect(entries[0].output.path).toBe('.');
     });
 
     it('should not set gitignore on npmdata entries when gitignore defaults to true', async () => {
@@ -309,10 +312,13 @@ describe('Publisher', () => {
       await initPublisher(['docs/**'], { workingDir: tmpDir });
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
-      const entries = pkgJson.npmdata.sets as Array<{ package: string; gitignore?: boolean }>;
+      const entries = pkgJson.npmdata.sets as Array<{
+        package: string;
+        output?: { gitignore?: boolean };
+      }>;
       // eslint-disable-next-line no-restricted-syntax
       for (const entry of entries) {
-        expect(entry.gitignore).toBeUndefined();
+        expect(entry.output?.gitignore).toBeUndefined();
       }
     });
 
@@ -326,10 +332,13 @@ describe('Publisher', () => {
       });
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
-      const entries = pkgJson.npmdata.sets as Array<{ package: string; gitignore?: boolean }>;
+      const entries = pkgJson.npmdata.sets as Array<{
+        package: string;
+        output?: { gitignore?: boolean };
+      }>;
       // eslint-disable-next-line no-restricted-syntax
       for (const entry of entries) {
-        expect(entry.gitignore).toBe(false);
+        expect(entry.output?.gitignore).toBe(false);
       }
     });
 
@@ -343,10 +352,13 @@ describe('Publisher', () => {
       });
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
-      const entries = pkgJson.npmdata.sets as Array<{ package: string; unmanaged?: boolean }>;
+      const entries = pkgJson.npmdata.sets as Array<{
+        package: string;
+        output?: { unmanaged?: boolean };
+      }>;
       // eslint-disable-next-line no-restricted-syntax
       for (const entry of entries) {
-        expect(entry.unmanaged).toBe(true);
+        expect(entry.output?.unmanaged).toBe(true);
       }
     });
 
@@ -356,10 +368,13 @@ describe('Publisher', () => {
       await initPublisher(['docs/**'], { workingDir: tmpDir, unmanaged: false });
 
       const pkgJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json')).toString());
-      const entries = pkgJson.npmdata.sets as Array<{ package: string; unmanaged?: boolean }>;
+      const entries = pkgJson.npmdata.sets as Array<{
+        package: string;
+        output?: { unmanaged?: boolean };
+      }>;
       // eslint-disable-next-line no-restricted-syntax
       for (const entry of entries) {
-        expect(entry.unmanaged).toBeUndefined();
+        expect(entry.output?.unmanaged).toBeUndefined();
       }
     });
   });

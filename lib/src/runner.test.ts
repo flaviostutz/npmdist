@@ -88,8 +88,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a' },
-            { package: 'pkg-b', outputDir: './b' },
+            { package: 'pkg-a', output: { path: './a' } },
+            { package: 'pkg-b', output: { path: './b' } },
           ],
         },
       });
@@ -122,7 +122,7 @@ describe('runner', () => {
     it('resolves a relative outputDir to an absolute path in the extract command', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: 'data' }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: 'data' } }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -133,7 +133,7 @@ describe('runner', () => {
     it('resolves dot outputDir to the current working directory in the extract command', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.' }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.' } }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -181,7 +181,7 @@ describe('runner', () => {
     it('uses --output dir as base when resolving outputDir in the extract command', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: 'data' }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: 'data' } }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--output', '/custom/base']);
@@ -192,7 +192,7 @@ describe('runner', () => {
     it('uses -o shorthand as base when resolving outputDir', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: 'data' }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: 'data' } }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '-o', '/custom/base']);
@@ -203,7 +203,7 @@ describe('runner', () => {
     it('resolves a relative --output against process.cwd()', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: 'data' }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: 'data' } }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--output', 'projects/myapp']);
@@ -226,7 +226,7 @@ describe('runner', () => {
     it('builds a minimal command with only required fields', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: './out' }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: './out' } }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -247,7 +247,7 @@ describe('runner', () => {
     it('adds --force when force is true', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', force: true }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.', force: true } }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -258,7 +258,7 @@ describe('runner', () => {
     it('omits --force when force is false', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', force: false }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.', force: false } }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -269,7 +269,7 @@ describe('runner', () => {
     it('adds --keep-existing when keepExisting is true', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', keepExisting: true }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.', keepExisting: true } }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -280,7 +280,7 @@ describe('runner', () => {
     it('omits --keep-existing when keepExisting is false', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', keepExisting: false }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.', keepExisting: false } }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -291,7 +291,7 @@ describe('runner', () => {
     it('omits --no-gitignore when gitignore is true', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', gitignore: true }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.', gitignore: true } }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -302,7 +302,7 @@ describe('runner', () => {
     it('adds --no-gitignore when gitignore is false', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', gitignore: false }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.', gitignore: false } }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -313,7 +313,7 @@ describe('runner', () => {
     it('adds --silent when silent is true', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', silent: true }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.' }, silent: true }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -324,7 +324,7 @@ describe('runner', () => {
     it('adds --dry-run when dryRun is true', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', dryRun: true }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.', dryRun: true } }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -335,7 +335,7 @@ describe('runner', () => {
     it('adds --upgrade when upgrade is true', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', upgrade: true }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.' }, upgrade: true }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -346,7 +346,7 @@ describe('runner', () => {
     it('adds --unmanaged when unmanaged is true', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', unmanaged: true }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.', unmanaged: true } }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -357,7 +357,7 @@ describe('runner', () => {
     it('omits --unmanaged when unmanaged is false', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', unmanaged: false }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.', unmanaged: false } }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -368,7 +368,9 @@ describe('runner', () => {
     it('adds --files with a single file pattern', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', files: ['**/*.md'] }] },
+        npmdata: {
+          sets: [{ package: 'my-pkg', output: { path: '.' }, selector: { files: ['**/*.md'] } }],
+        },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -379,7 +381,15 @@ describe('runner', () => {
     it('joins multiple file patterns with a comma', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', files: ['**/*.md', 'data/**'] }] },
+        npmdata: {
+          sets: [
+            {
+              package: 'my-pkg',
+              output: { path: '.' },
+              selector: { files: ['**/*.md', 'data/**'] },
+            },
+          ],
+        },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -390,7 +400,7 @@ describe('runner', () => {
     it('omits --files when files array is empty', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', files: [] }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.' }, selector: { files: [] } }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -401,7 +411,15 @@ describe('runner', () => {
     it('adds --content-regex with a single regex pattern', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', contentRegexes: ['foo.*bar'] }] },
+        npmdata: {
+          sets: [
+            {
+              package: 'my-pkg',
+              output: { path: '.' },
+              selector: { contentRegexes: ['foo.*bar'] },
+            },
+          ],
+        },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -413,7 +431,13 @@ describe('runner', () => {
       setupPackageJson({
         name: 'irrelevant',
         npmdata: {
-          sets: [{ package: 'my-pkg', outputDir: '.', contentRegexes: ['foo.*bar', '^baz'] }],
+          sets: [
+            {
+              package: 'my-pkg',
+              output: { path: '.' },
+              selector: { contentRegexes: ['foo.*bar', '^baz'] },
+            },
+          ],
         },
       });
 
@@ -425,7 +449,9 @@ describe('runner', () => {
     it('omits --content-regex when contentRegexes array is empty', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', contentRegexes: [] }] },
+        npmdata: {
+          sets: [{ package: 'my-pkg', output: { path: '.' }, selector: { contentRegexes: [] } }],
+        },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -440,14 +466,10 @@ describe('runner', () => {
           sets: [
             {
               package: 'full-pkg@^2.0.0',
-              outputDir: './data',
-              force: true,
-              gitignore: false,
+              output: { path: './data', force: true, gitignore: false, dryRun: true },
+              selector: { files: ['**/*.json', 'docs/**'], contentRegexes: ['schema', 'version'] },
               silent: true,
-              dryRun: true,
               upgrade: true,
-              files: ['**/*.json', 'docs/**'],
-              contentRegexes: ['schema', 'version'],
             },
           ],
         },
@@ -470,7 +492,7 @@ describe('runner', () => {
     it('uses the resolved CLI path in the command', () => {
       setupPackageJson({
         name: 'irrelevant',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.' }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.' } }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -546,14 +568,22 @@ describe('runner', () => {
   });
 
   describe('filterEntriesByPresets', () => {
-    const entryA: NpmdataExtractEntry = { package: 'pkg-a', outputDir: './a', presets: ['prod'] };
+    const entryA: NpmdataExtractEntry = {
+      package: 'pkg-a',
+      output: { path: './a' },
+      presets: ['prod'],
+    };
     const entryB: NpmdataExtractEntry = {
       package: 'pkg-b',
-      outputDir: './b',
+      output: { path: './b' },
       presets: ['staging', 'prod'],
     };
-    const entryC: NpmdataExtractEntry = { package: 'pkg-c', outputDir: './c', presets: ['dev'] };
-    const entryNoPresets: NpmdataExtractEntry = { package: 'pkg-d', outputDir: './d' };
+    const entryC: NpmdataExtractEntry = {
+      package: 'pkg-c',
+      output: { path: './c' },
+      presets: ['dev'],
+    };
+    const entryNoPresets: NpmdataExtractEntry = { package: 'pkg-d', output: { path: './d' } };
 
     it('returns all entries when requestedPresets is empty', () => {
       expect(filterEntriesByPresets([entryA, entryB, entryC, entryNoPresets], [])).toEqual([
@@ -592,8 +622,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a', presets: ['prod'] },
-            { package: 'pkg-b', outputDir: './b', presets: ['staging'] },
+            { package: 'pkg-a', output: { path: './a' }, presets: ['prod'] },
+            { package: 'pkg-b', output: { path: './b' }, presets: ['staging'] },
           ],
         },
       });
@@ -608,8 +638,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a', presets: ['prod'] },
-            { package: 'pkg-b', outputDir: './b', presets: ['staging'] },
+            { package: 'pkg-a', output: { path: './a' }, presets: ['prod'] },
+            { package: 'pkg-b', output: { path: './b' }, presets: ['staging'] },
           ],
         },
       });
@@ -628,9 +658,9 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a', presets: ['prod'] },
-            { package: 'pkg-b', outputDir: './b', presets: ['staging'] },
-            { package: 'pkg-c', outputDir: './c', presets: ['dev'] },
+            { package: 'pkg-a', output: { path: './a' }, presets: ['prod'] },
+            { package: 'pkg-b', output: { path: './b' }, presets: ['staging'] },
+            { package: 'pkg-c', output: { path: './c' }, presets: ['dev'] },
           ],
         },
       });
@@ -647,7 +677,7 @@ describe('runner', () => {
     it('runs no extract commands but purges all entries when no entry matches the requested preset', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'pkg-a', outputDir: './a', presets: ['dev'] }] },
+        npmdata: { sets: [{ package: 'pkg-a', output: { path: './a' }, presets: ['dev'] }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--presets', 'prod']);
@@ -663,8 +693,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a' },
-            { package: 'pkg-b', outputDir: './b', presets: ['prod'] },
+            { package: 'pkg-a', output: { path: './a' } },
+            { package: 'pkg-b', output: { path: './b' }, presets: ['prod'] },
           ],
         },
       });
@@ -681,7 +711,7 @@ describe('runner', () => {
     it('does not pass --presets to the extract command', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'pkg-a', outputDir: './a', presets: ['prod'] }] },
+        npmdata: { sets: [{ package: 'pkg-a', output: { path: './a' }, presets: ['prod'] }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--presets', 'prod']);
@@ -696,8 +726,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a', presets: ['prod'] },
-            { package: 'pkg-b', outputDir: './b', presets: ['staging'] },
+            { package: 'pkg-a', output: { path: './a' }, presets: ['prod'] },
+            { package: 'pkg-b', output: { path: './b' }, presets: ['staging'] },
           ],
         },
       });
@@ -716,8 +746,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a', presets: ['prod'] },
-            { package: 'pkg-b', outputDir: './b', presets: ['staging'] },
+            { package: 'pkg-a', output: { path: './a' }, presets: ['prod'] },
+            { package: 'pkg-b', output: { path: './b' }, presets: ['staging'] },
           ],
         },
       });
@@ -735,9 +765,9 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a', presets: ['prod'] },
-            { package: 'pkg-b', outputDir: './b', presets: ['staging'] },
-            { package: 'pkg-c', outputDir: './c', presets: ['dev'] },
+            { package: 'pkg-a', output: { path: './a' }, presets: ['prod'] },
+            { package: 'pkg-b', output: { path: './b' }, presets: ['staging'] },
+            { package: 'pkg-c', output: { path: './c' }, presets: ['dev'] },
           ],
         },
       });
@@ -756,8 +786,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a', presets: ['prod'] },
-            { package: 'pkg-untagged', outputDir: './u' },
+            { package: 'pkg-a', output: { path: './a' }, presets: ['prod'] },
+            { package: 'pkg-untagged', output: { path: './u' } },
           ],
         },
       });
@@ -773,8 +803,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a', presets: ['prod'] },
-            { package: 'pkg-b', outputDir: './b', presets: ['prod', 'staging'] },
+            { package: 'pkg-a', output: { path: './a' }, presets: ['prod'] },
+            { package: 'pkg-b', output: { path: './b' }, presets: ['prod', 'staging'] },
           ],
         },
       });
@@ -791,8 +821,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a', presets: ['staging'] },
-            { package: 'pkg-b', outputDir: './b', presets: ['dev'] },
+            { package: 'pkg-a', output: { path: './a' }, presets: ['staging'] },
+            { package: 'pkg-b', output: { path: './b' }, presets: ['dev'] },
           ],
         },
       });
@@ -878,7 +908,7 @@ describe('runner', () => {
     it('adds --unmanaged to the extract command when the flag is in argv', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.' }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.' } }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--unmanaged']);
@@ -889,7 +919,7 @@ describe('runner', () => {
     it('overrides entry-level unmanaged:false and adds --unmanaged to the command', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', unmanaged: false }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.', unmanaged: false } }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--unmanaged']);
@@ -900,7 +930,7 @@ describe('runner', () => {
     it('does not add --unmanaged when the flag is absent', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.' }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.' } }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -913,8 +943,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a' },
-            { package: 'pkg-b', outputDir: './b', unmanaged: false },
+            { package: 'pkg-a', output: { path: './a' } },
+            { package: 'pkg-b', output: { path: './b', unmanaged: false } },
           ],
         },
       });
@@ -932,7 +962,7 @@ describe('runner', () => {
     it('adds --no-gitignore to the extract command when the flag is in argv', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.' }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.' } }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--no-gitignore']);
@@ -943,7 +973,7 @@ describe('runner', () => {
     it('overrides entry-level gitignore:true and adds --no-gitignore to the command', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', gitignore: true }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.', gitignore: true } }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--no-gitignore']);
@@ -954,7 +984,7 @@ describe('runner', () => {
     it('does not add --no-gitignore when the flag is absent', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.' }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.' } }] },
       });
 
       run(BIN_DIR, EXTRACT_ARGV);
@@ -967,8 +997,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a', gitignore: true },
-            { package: 'pkg-b', outputDir: './b' },
+            { package: 'pkg-a', output: { path: './a', gitignore: true } },
+            { package: 'pkg-b', output: { path: './b' } },
           ],
         },
       });
@@ -987,7 +1017,7 @@ describe('runner', () => {
     const CHECK_CWD = '/my/project';
 
     it('builds a check command with package and resolved output dir', () => {
-      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: './out' };
+      const entry: NpmdataExtractEntry = { package: 'my-pkg', output: { path: './out' } };
       const cmd = buildCheckCommand(CLI_PATH, entry, CHECK_CWD);
       expect(cmd).toContain('check');
       expect(cmd).toContain('--packages "my-pkg"');
@@ -995,31 +1025,31 @@ describe('runner', () => {
     });
 
     it('resolves a relative outputDir to an absolute path', () => {
-      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: 'data' };
+      const entry: NpmdataExtractEntry = { package: 'my-pkg', output: { path: 'data' } };
       const cmd = buildCheckCommand(CLI_PATH, entry, '/project/root');
       expect(cmd).toContain('--output "/project/root/data"');
     });
 
     it('resolves dot outputDir to the cwd itself', () => {
-      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: '.' };
+      const entry: NpmdataExtractEntry = { package: 'my-pkg', output: { path: '.' } };
       const cmd = buildCheckCommand(CLI_PATH, entry, '/project/root');
       expect(cmd).toContain('--output "/project/root"');
     });
 
     it('preserves a version specifier in the package name', () => {
-      const entry: NpmdataExtractEntry = { package: 'my-pkg@^2.0.0', outputDir: '.' };
+      const entry: NpmdataExtractEntry = { package: 'my-pkg@^2.0.0', output: { path: '.' } };
       const cmd = buildCheckCommand(CLI_PATH, entry, CHECK_CWD);
       expect(cmd).toContain('--packages "my-pkg@^2.0.0"');
     });
 
     it('uses node and the provided CLI path', () => {
-      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: '.' };
+      const entry: NpmdataExtractEntry = { package: 'my-pkg', output: { path: '.' } };
       const cmd = buildCheckCommand(CLI_PATH, entry, CHECK_CWD);
       expect(cmd).toMatch(/node ".+main\.js"/);
     });
 
     it('uses process.cwd() as default cwd when none is provided', () => {
-      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: 'out' };
+      const entry: NpmdataExtractEntry = { package: 'my-pkg', output: { path: 'out' } };
       const cmd = buildCheckCommand(CLI_PATH, entry);
       expect(cmd).toContain(`--output "${path.resolve(process.cwd(), 'out')}"`);
     });
@@ -1027,21 +1057,25 @@ describe('runner', () => {
     it('includes --files flag when files are specified', () => {
       const entry: NpmdataExtractEntry = {
         package: 'my-pkg',
-        outputDir: '.',
-        files: ['*.md', 'docs/**'],
+        output: { path: '.' },
+        selector: { files: ['*.md', 'docs/**'] },
       };
       const cmd = buildCheckCommand(CLI_PATH, entry, CHECK_CWD);
       expect(cmd).toContain('--files "*.md,docs/**"');
     });
 
     it('omits --files flag when files is not set', () => {
-      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: '.' };
+      const entry: NpmdataExtractEntry = { package: 'my-pkg', output: { path: '.' } };
       const cmd = buildCheckCommand(CLI_PATH, entry, CHECK_CWD);
       expect(cmd).not.toContain('--files');
     });
 
     it('omits --files flag when files is an empty array', () => {
-      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: '.', files: [] };
+      const entry: NpmdataExtractEntry = {
+        package: 'my-pkg',
+        output: { path: '.' },
+        selector: { files: [] },
+      };
       const cmd = buildCheckCommand(CLI_PATH, entry, CHECK_CWD);
       expect(cmd).not.toContain('--files');
     });
@@ -1049,15 +1083,15 @@ describe('runner', () => {
     it('includes --content-regex flag when contentRegexes are specified', () => {
       const entry: NpmdataExtractEntry = {
         package: 'my-pkg',
-        outputDir: '.',
-        contentRegexes: ['foo.*bar', '^version:'],
+        output: { path: '.' },
+        selector: { contentRegexes: ['foo.*bar', '^version:'] },
       };
       const cmd = buildCheckCommand(CLI_PATH, entry, CHECK_CWD);
       expect(cmd).toContain('--content-regex "foo.*bar,^version:"');
     });
 
     it('omits --content-regex flag when contentRegexes is not set', () => {
-      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: '.' };
+      const entry: NpmdataExtractEntry = { package: 'my-pkg', output: { path: '.' } };
       const cmd = buildCheckCommand(CLI_PATH, entry, CHECK_CWD);
       expect(cmd).not.toContain('--content-regex');
     });
@@ -1065,8 +1099,8 @@ describe('runner', () => {
     it('omits --content-regex flag when contentRegexes is an empty array', () => {
       const entry: NpmdataExtractEntry = {
         package: 'my-pkg',
-        outputDir: '.',
-        contentRegexes: [],
+        output: { path: '.' },
+        selector: { contentRegexes: [] },
       };
       const cmd = buildCheckCommand(CLI_PATH, entry, CHECK_CWD);
       expect(cmd).not.toContain('--content-regex');
@@ -1075,9 +1109,8 @@ describe('runner', () => {
     it('includes both --files and --content-regex when both are set', () => {
       const entry: NpmdataExtractEntry = {
         package: 'my-pkg',
-        outputDir: './out',
-        files: ['data/**'],
-        contentRegexes: ['pattern'],
+        output: { path: './out' },
+        selector: { files: ['data/**'], contentRegexes: ['pattern'] },
       };
       const cmd = buildCheckCommand(CLI_PATH, entry, CHECK_CWD);
       expect(cmd).toContain('--files "data/**"');
@@ -1127,8 +1160,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a' },
-            { package: 'pkg-b', outputDir: './b' },
+            { package: 'pkg-a', output: { path: './a' } },
+            { package: 'pkg-b', output: { path: './b' } },
           ],
         },
       });
@@ -1143,7 +1176,7 @@ describe('runner', () => {
     it('passes correct package and output dir in the check command', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'pkg-a@^1.0.0', outputDir: './data' }] },
+        npmdata: { sets: [{ package: 'pkg-a@^1.0.0', output: { path: './data' } }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'check']);
@@ -1159,8 +1192,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a', presets: ['prod'] },
-            { package: 'pkg-b', outputDir: './b', presets: ['staging'] },
+            { package: 'pkg-a', output: { path: './a' }, presets: ['prod'] },
+            { package: 'pkg-b', output: { path: './b' }, presets: ['staging'] },
           ],
         },
       });
@@ -1174,7 +1207,7 @@ describe('runner', () => {
     it('uses --output as base dir for resolving outputDir in check', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: 'data' }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: 'data' } }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'check', '--output', '/custom/base']);
@@ -1194,7 +1227,15 @@ describe('runner', () => {
     it('passes --files from entry to check command', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'pkg-a', outputDir: './data', files: ['*.md', 'docs/**'] }] },
+        npmdata: {
+          sets: [
+            {
+              package: 'pkg-a',
+              output: { path: './data' },
+              selector: { files: ['*.md', 'docs/**'] },
+            },
+          ],
+        },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'check']);
@@ -1206,7 +1247,13 @@ describe('runner', () => {
       setupPackageJson({
         name: 'my-pkg',
         npmdata: {
-          sets: [{ package: 'pkg-a', outputDir: './data', contentRegexes: ['foo.*bar'] }],
+          sets: [
+            {
+              package: 'pkg-a',
+              output: { path: './data' },
+              selector: { contentRegexes: ['foo.*bar'] },
+            },
+          ],
         },
       });
 
@@ -1222,9 +1269,8 @@ describe('runner', () => {
           sets: [
             {
               package: 'pkg-a',
-              outputDir: './data',
-              files: ['data/**'],
-              contentRegexes: ['pattern'],
+              output: { path: './data' },
+              selector: { files: ['data/**'], contentRegexes: ['pattern'] },
             },
           ],
         },
@@ -1242,8 +1288,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-managed', outputDir: './a' },
-            { package: 'pkg-unmanaged', outputDir: './b', unmanaged: true },
+            { package: 'pkg-managed', output: { path: './a' } },
+            { package: 'pkg-unmanaged', output: { path: './b', unmanaged: true } },
           ],
         },
       });
@@ -1260,8 +1306,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a' },
-            { package: 'pkg-b', outputDir: './b' },
+            { package: 'pkg-a', output: { path: './a' } },
+            { package: 'pkg-b', output: { path: './b' } },
           ],
         },
       });
@@ -1298,10 +1344,12 @@ describe('runner', () => {
               sets: [
                 {
                   package: 'pkg-a',
-                  outputDir: '.',
-                  contentReplacements: [
-                    { files: 'doc.md', match: '<!-- old -->', replace: '<!-- new -->' },
-                  ],
+                  output: {
+                    path: '.',
+                    contentReplacements: [
+                      { files: 'doc.md', match: '<!-- old -->', replace: '<!-- new -->' },
+                    ],
+                  },
                 },
               ],
             },
@@ -1339,10 +1387,12 @@ describe('runner', () => {
               sets: [
                 {
                   package: 'pkg-a',
-                  outputDir: '.',
-                  contentReplacements: [
-                    { files: 'doc.md', match: '<!-- old -->', replace: '<!-- new -->' },
-                  ],
+                  output: {
+                    path: '.',
+                    contentReplacements: [
+                      { files: 'doc.md', match: '<!-- old -->', replace: '<!-- new -->' },
+                    ],
+                  },
                 },
               ],
             },
@@ -1364,8 +1414,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a' },
-            { package: 'pkg-b', outputDir: './b' },
+            { package: 'pkg-a', output: { path: './a' } },
+            { package: 'pkg-b', output: { path: './b' } },
           ],
         },
       });
@@ -1382,8 +1432,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './data' },
-            { package: 'pkg-b', outputDir: './data' },
+            { package: 'pkg-a', output: { path: './data' } },
+            { package: 'pkg-b', output: { path: './data' } },
           ],
         },
       });
@@ -1396,7 +1446,7 @@ describe('runner', () => {
     it('passes the resolved output dir in the list command', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'pkg-a', outputDir: './data' }] },
+        npmdata: { sets: [{ package: 'pkg-a', output: { path: './data' } }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'list']);
@@ -1407,7 +1457,7 @@ describe('runner', () => {
     it('uses --output as base dir for resolving outputDir in list', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: 'data' }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: 'data' } }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'list', '--output', '/custom/base']);
@@ -1420,8 +1470,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a', presets: ['prod'] },
-            { package: 'pkg-b', outputDir: './b', presets: ['staging'] },
+            { package: 'pkg-a', output: { path: './a' }, presets: ['prod'] },
+            { package: 'pkg-b', output: { path: './b' }, presets: ['staging'] },
           ],
         },
       });
@@ -1448,8 +1498,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a' },
-            { package: 'pkg-b', outputDir: './b' },
+            { package: 'pkg-a', output: { path: './a' } },
+            { package: 'pkg-b', output: { path: './b' } },
           ],
         },
       });
@@ -1466,8 +1516,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a', presets: ['prod'] },
-            { package: 'pkg-b', outputDir: './b', presets: ['staging'] },
+            { package: 'pkg-a', output: { path: './a' }, presets: ['prod'] },
+            { package: 'pkg-b', output: { path: './b' }, presets: ['staging'] },
           ],
         },
       });
@@ -1481,7 +1531,7 @@ describe('runner', () => {
     it('overlays --dry-run from argv onto the purge command', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.' }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.' } }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'purge', '--dry-run']);
@@ -1492,7 +1542,7 @@ describe('runner', () => {
     it('overlays --silent from argv onto the purge command', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.' }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.' } }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'purge', '--silent']);
@@ -1503,7 +1553,7 @@ describe('runner', () => {
     it('uses --output as base dir for resolving outputDir in purge', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: 'data' }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: 'data' } }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'purge', '--output', '/custom/base']);
@@ -1541,7 +1591,7 @@ describe('runner', () => {
 
     it('removes stale managed symlinks from target dirs after purge', () => {
       const outputDir = path.join(tmpDir, 'out');
-      const targetDir = path.join(tmpDir, '.github', 'skills');
+      const targetDir = path.join(outputDir, '.github', 'skills');
       fs.mkdirSync(path.join(outputDir, 'skills'), { recursive: true });
       fs.mkdirSync(targetDir, { recursive: true });
 
@@ -1557,8 +1607,10 @@ describe('runner', () => {
               sets: [
                 {
                   package: 'pkg-a',
-                  outputDir: 'out',
-                  symlinks: [{ source: 'skills/*', target: '.github/skills' }],
+                  output: {
+                    path: 'out',
+                    symlinks: [{ source: 'skills/*', target: '.github/skills' }],
+                  },
                 },
               ],
             },
@@ -1583,7 +1635,7 @@ describe('runner', () => {
 
     it('does not remove symlinks when --dry-run is active', () => {
       const outputDir = path.join(tmpDir, 'out');
-      const targetDir = path.join(tmpDir, '.github', 'skills');
+      const targetDir = path.join(outputDir, '.github', 'skills');
       fs.mkdirSync(path.join(outputDir, 'skills'), { recursive: true });
       fs.mkdirSync(targetDir, { recursive: true });
 
@@ -1598,8 +1650,10 @@ describe('runner', () => {
               sets: [
                 {
                   package: 'pkg-a',
-                  outputDir: 'out',
-                  symlinks: [{ source: 'skills/*', target: '.github/skills' }],
+                  output: {
+                    path: 'out',
+                    symlinks: [{ source: 'skills/*', target: '.github/skills' }],
+                  },
                 },
               ],
             },
@@ -1619,7 +1673,7 @@ describe('runner', () => {
     it('adds --dry-run to the extract command when --dry-run is in argv', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.' }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.' } }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--dry-run']);
@@ -1630,7 +1684,7 @@ describe('runner', () => {
     it('adds --silent to the extract command when --silent is in argv', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.' }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.' } }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--silent']);
@@ -1641,7 +1695,7 @@ describe('runner', () => {
     it('merges argv --dry-run with entry dryRun:false (argv wins)', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', dryRun: false }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.', dryRun: false } }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract', '--dry-run']);
@@ -1652,7 +1706,7 @@ describe('runner', () => {
     it('keeps --dry-run when already set in entry config', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'my-pkg', outputDir: '.', dryRun: true }] },
+        npmdata: { sets: [{ package: 'my-pkg', output: { path: '.', dryRun: true } }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', 'extract']);
@@ -1665,8 +1719,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a' },
-            { package: 'pkg-b', outputDir: './b' },
+            { package: 'pkg-a', output: { path: './a' } },
+            { package: 'pkg-b', output: { path: './b' } },
           ],
         },
       });
@@ -1684,7 +1738,7 @@ describe('runner', () => {
     const PURGE_CWD = '/my/project';
 
     it('builds a purge command with package name and resolved absolute output dir', () => {
-      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: './out' };
+      const entry: NpmdataExtractEntry = { package: 'my-pkg', output: { path: './out' } };
       const cmd = buildPurgeCommand(CLI_PATH, entry, PURGE_CWD);
       expect(cmd).toContain('purge');
       expect(cmd).toContain('--packages "my-pkg"');
@@ -1692,50 +1746,50 @@ describe('runner', () => {
     });
 
     it('resolves a relative outputDir to an absolute path', () => {
-      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: 'data' };
+      const entry: NpmdataExtractEntry = { package: 'my-pkg', output: { path: 'data' } };
       const cmd = buildPurgeCommand(CLI_PATH, entry, '/project/root');
       expect(cmd).toContain('--output "/project/root/data"');
     });
 
     it('resolves dot outputDir to the cwd itself', () => {
-      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: '.' };
+      const entry: NpmdataExtractEntry = { package: 'my-pkg', output: { path: '.' } };
       const cmd = buildPurgeCommand(CLI_PATH, entry, '/project/root');
       expect(cmd).toContain('--output "/project/root"');
     });
 
     it('resolves an absolute outputDir as-is, ignoring cwd', () => {
-      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: '/absolute/path' };
+      const entry: NpmdataExtractEntry = { package: 'my-pkg', output: { path: '/absolute/path' } };
       const cmd = buildPurgeCommand(CLI_PATH, entry, '/project/root');
       expect(cmd).toContain('--output "/absolute/path"');
     });
 
     it('strips version specifier from the package name', () => {
-      const entry: NpmdataExtractEntry = { package: 'my-pkg@^2.0.0', outputDir: '.' };
+      const entry: NpmdataExtractEntry = { package: 'my-pkg@^2.0.0', output: { path: '.' } };
       const cmd = buildPurgeCommand(CLI_PATH, entry, PURGE_CWD);
       expect(cmd).toContain('--packages "my-pkg"');
       expect(cmd).not.toContain('2.0.0');
     });
 
     it('adds --silent when entry has silent: true', () => {
-      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: '.', silent: true };
+      const entry: NpmdataExtractEntry = { package: 'my-pkg', output: { path: '.' }, silent: true };
       const cmd = buildPurgeCommand(CLI_PATH, entry, PURGE_CWD);
       expect(cmd).toContain(' --silent');
     });
 
     it('adds --dry-run when entry has dryRun: true', () => {
-      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: '.', dryRun: true };
+      const entry: NpmdataExtractEntry = { package: 'my-pkg', output: { path: '.', dryRun: true } };
       const cmd = buildPurgeCommand(CLI_PATH, entry, PURGE_CWD);
       expect(cmd).toContain(' --dry-run');
     });
 
     it('uses node and the provided CLI path', () => {
-      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: '.' };
+      const entry: NpmdataExtractEntry = { package: 'my-pkg', output: { path: '.' } };
       const cmd = buildPurgeCommand(CLI_PATH, entry, PURGE_CWD);
       expect(cmd).toMatch(/node ".+main\.js"/);
     });
 
     it('uses process.cwd() as default cwd when none is provided', () => {
-      const entry: NpmdataExtractEntry = { package: 'my-pkg', outputDir: 'out' };
+      const entry: NpmdataExtractEntry = { package: 'my-pkg', output: { path: 'out' } };
       const cmd = buildPurgeCommand(CLI_PATH, entry);
       expect(cmd).toContain(`--output "${path.resolve(process.cwd(), 'out')}"`);
     });
@@ -1744,39 +1798,39 @@ describe('runner', () => {
   describe('collectAllPresets', () => {
     it('returns an empty array when no entry has presets', () => {
       const entries: NpmdataExtractEntry[] = [
-        { package: 'pkg-a', outputDir: './a' },
-        { package: 'pkg-b', outputDir: './b' },
+        { package: 'pkg-a', output: { path: './a' } },
+        { package: 'pkg-b', output: { path: './b' } },
       ];
       expect(collectAllPresets(entries)).toEqual([]);
     });
 
     it('collects presets from a single entry', () => {
       const entries: NpmdataExtractEntry[] = [
-        { package: 'pkg-a', outputDir: './a', presets: ['prod', 'staging'] },
+        { package: 'pkg-a', output: { path: './a' }, presets: ['prod', 'staging'] },
       ];
       expect(collectAllPresets(entries)).toEqual(['prod', 'staging']);
     });
 
     it('deduplicates presets across entries', () => {
       const entries: NpmdataExtractEntry[] = [
-        { package: 'pkg-a', outputDir: './a', presets: ['prod'] },
-        { package: 'pkg-b', outputDir: './b', presets: ['prod', 'staging'] },
-        { package: 'pkg-c', outputDir: './c', presets: ['dev'] },
+        { package: 'pkg-a', output: { path: './a' }, presets: ['prod'] },
+        { package: 'pkg-b', output: { path: './b' }, presets: ['prod', 'staging'] },
+        { package: 'pkg-c', output: { path: './c' }, presets: ['dev'] },
       ];
       expect(collectAllPresets(entries)).toEqual(['dev', 'prod', 'staging']);
     });
 
     it('returns presets sorted alphabetically', () => {
       const entries: NpmdataExtractEntry[] = [
-        { package: 'pkg-a', outputDir: './a', presets: ['zzz', 'aaa', 'mmm'] },
+        { package: 'pkg-a', output: { path: './a' }, presets: ['zzz', 'aaa', 'mmm'] },
       ];
       expect(collectAllPresets(entries)).toEqual(['aaa', 'mmm', 'zzz']);
     });
 
     it('ignores entries with undefined presets', () => {
       const entries: NpmdataExtractEntry[] = [
-        { package: 'pkg-a', outputDir: './a', presets: ['prod'] },
-        { package: 'pkg-b', outputDir: './b' },
+        { package: 'pkg-a', output: { path: './a' }, presets: ['prod'] },
+        { package: 'pkg-b', output: { path: './b' } },
       ];
       expect(collectAllPresets(entries)).toEqual(['prod']);
     });
@@ -1858,7 +1912,7 @@ describe('runner', () => {
     it('prints help and does not run any extractions when --help is present', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'pkg-a', outputDir: './a', presets: ['prod'] }] },
+        npmdata: { sets: [{ package: 'pkg-a', output: { path: './a' }, presets: ['prod'] }] },
       });
       const writeSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
 
@@ -1885,8 +1939,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a', presets: ['prod'] },
-            { package: 'pkg-b', outputDir: './b', presets: ['staging', 'prod'] },
+            { package: 'pkg-a', output: { path: './a' }, presets: ['prod'] },
+            { package: 'pkg-b', output: { path: './b' }, presets: ['staging', 'prod'] },
           ],
         },
       });
@@ -1903,7 +1957,7 @@ describe('runner', () => {
     it('shows placeholder when no presets are defined', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'pkg-a', outputDir: './a' }] },
+        npmdata: { sets: [{ package: 'pkg-a', output: { path: './a' } }] },
       });
       const writeSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
 
@@ -1919,7 +1973,7 @@ describe('runner', () => {
     it('runs extract when no action is provided', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'pkg-a', outputDir: './a' }] },
+        npmdata: { sets: [{ package: 'pkg-a', output: { path: './a' } }] },
       });
 
       run(BIN_DIR, ['node', 'script.js']);
@@ -1931,7 +1985,7 @@ describe('runner', () => {
     it('runs extract when only flags are provided (no explicit action)', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'pkg-a', outputDir: './a', presets: ['t1'] }] },
+        npmdata: { sets: [{ package: 'pkg-a', output: { path: './a' }, presets: ['t1'] }] },
       });
 
       run(BIN_DIR, ['node', 'script.js', '--presets', 't1']);
@@ -1991,13 +2045,16 @@ describe('runner', () => {
     });
 
     it('does nothing when entry has no symlinks config', () => {
-      const entry: NpmdataExtractEntry = { package: 'pkg', outputDir: './out' };
+      const entry: NpmdataExtractEntry = { package: 'pkg', output: { path: './out' } };
       // Should not throw
       expect(() => applySymlinks(entry, tmpDir)).not.toThrow();
     });
 
     it('does nothing when symlinks array is empty', () => {
-      const entry: NpmdataExtractEntry = { package: 'pkg', outputDir: './out', symlinks: [] };
+      const entry: NpmdataExtractEntry = {
+        package: 'pkg',
+        output: { path: './out', symlinks: [] },
+      };
       expect(() => applySymlinks(entry, tmpDir)).not.toThrow();
     });
 
@@ -2006,11 +2063,10 @@ describe('runner', () => {
       fs.mkdirSync(outputDir, { recursive: true });
       fs.mkdirSync(path.join(outputDir, 'skills', 'skill-a'), { recursive: true });
 
-      const targetDir = path.join(tmpDir, '.github', 'skills');
+      const targetDir = path.join(outputDir, '.github', 'skills');
       const entry: NpmdataExtractEntry = {
         package: 'pkg',
-        outputDir: 'out',
-        symlinks: [{ source: 'skills/*', target: '.github/skills' }],
+        output: { path: 'out', symlinks: [{ source: 'skills/*', target: '.github/skills' }] },
       };
 
       applySymlinks(entry, tmpDir);
@@ -2031,13 +2087,12 @@ describe('runner', () => {
 
       const entry: NpmdataExtractEntry = {
         package: 'pkg',
-        outputDir: 'out',
-        symlinks: [{ source: 'skills/*', target: '.github/skills' }],
+        output: { path: 'out', symlinks: [{ source: 'skills/*', target: '.github/skills' }] },
       };
 
       applySymlinks(entry, tmpDir);
 
-      const targetDir = path.join(tmpDir, '.github', 'skills');
+      const targetDir = path.join(outputDir, '.github', 'skills');
       const symlinkA = path.join(targetDir, 'skill-a');
       const symlinkB = path.join(targetDir, 'skill-b');
 
@@ -2053,7 +2108,7 @@ describe('runner', () => {
 
     it('removes stale managed symlinks that no longer match the glob', () => {
       const outputDir = path.join(tmpDir, 'out');
-      const targetDir = path.join(tmpDir, '.github', 'skills');
+      const targetDir = path.join(outputDir, '.github', 'skills');
       fs.mkdirSync(path.join(outputDir, 'skills', 'skill-a'), { recursive: true });
       fs.writeFileSync(path.join(outputDir, 'skills', 'skill-a', 'README.md'), '');
       fs.writeFileSync(path.join(outputDir, '.npmdata'), 'skills/skill-a/README.md|pkg|1.0.0|0\n');
@@ -2066,8 +2121,7 @@ describe('runner', () => {
 
       const entry: NpmdataExtractEntry = {
         package: 'pkg',
-        outputDir: 'out',
-        symlinks: [{ source: 'skills/*', target: '.github/skills' }],
+        output: { path: 'out', symlinks: [{ source: 'skills/*', target: '.github/skills' }] },
       };
 
       applySymlinks(entry, tmpDir);
@@ -2089,7 +2143,7 @@ describe('runner', () => {
 
     it('does not touch symlinks that do not point into outputDir', () => {
       const outputDir = path.join(tmpDir, 'out');
-      const targetDir = path.join(tmpDir, '.github', 'skills');
+      const targetDir = path.join(outputDir, '.github', 'skills');
       const externalDir = path.join(tmpDir, 'external');
       fs.mkdirSync(path.join(outputDir, 'skills', 'skill-a'), { recursive: true });
       fs.writeFileSync(path.join(outputDir, 'skills', 'skill-a', 'README.md'), '');
@@ -2102,8 +2156,7 @@ describe('runner', () => {
 
       const entry: NpmdataExtractEntry = {
         package: 'pkg',
-        outputDir: 'out',
-        symlinks: [{ source: 'skills/*', target: '.github/skills' }],
+        output: { path: 'out', symlinks: [{ source: 'skills/*', target: '.github/skills' }] },
       };
 
       applySymlinks(entry, tmpDir);
@@ -2114,7 +2167,7 @@ describe('runner', () => {
 
     it('does not clobber an existing non-symlink at the target basename', () => {
       const outputDir = path.join(tmpDir, 'out');
-      const targetDir = path.join(tmpDir, '.github', 'skills');
+      const targetDir = path.join(outputDir, '.github', 'skills');
       fs.mkdirSync(path.join(outputDir, 'skills', 'skill-a'), { recursive: true });
       fs.writeFileSync(path.join(outputDir, 'skills', 'skill-a', 'README.md'), '');
       fs.writeFileSync(path.join(outputDir, '.npmdata'), 'skills/skill-a/README.md|pkg|1.0.0|0\n');
@@ -2126,8 +2179,7 @@ describe('runner', () => {
 
       const entry: NpmdataExtractEntry = {
         package: 'pkg',
-        outputDir: 'out',
-        symlinks: [{ source: 'skills/*', target: '.github/skills' }],
+        output: { path: 'out', symlinks: [{ source: 'skills/*', target: '.github/skills' }] },
       };
 
       applySymlinks(entry, tmpDir);
@@ -2145,14 +2197,13 @@ describe('runner', () => {
 
       const entry: NpmdataExtractEntry = {
         package: 'pkg',
-        outputDir: 'out',
-        symlinks: [{ source: 'skills/*', target: '.github/skills' }],
+        output: { path: 'out', symlinks: [{ source: 'skills/*', target: '.github/skills' }] },
       };
 
       applySymlinks(entry, tmpDir);
       applySymlinks(entry, tmpDir);
 
-      const targetDir = path.join(tmpDir, '.github', 'skills');
+      const targetDir = path.join(outputDir, '.github', 'skills');
       expect(fs.lstatSync(path.join(targetDir, 'skill-a')).isSymbolicLink()).toBe(true);
     });
 
@@ -2166,13 +2217,12 @@ describe('runner', () => {
 
       const entry: NpmdataExtractEntry = {
         package: 'pkg',
-        outputDir: 'out',
-        symlinks: [{ source: 'skills/*', target: '.github/skills' }],
+        output: { path: 'out', symlinks: [{ source: 'skills/*', target: '.github/skills' }] },
       };
 
       applySymlinks(entry, tmpDir);
 
-      const expectedPath = path.join('.github', 'skills', 'skill-a');
+      const expectedPath = path.join('out', '.github', 'skills', 'skill-a');
       expect(logSpy).toHaveBeenCalledWith(`A\t${expectedPath}`);
 
       logSpy.mockRestore();
@@ -2180,7 +2230,7 @@ describe('runner', () => {
 
     it('logs M for updated symlinks in git style', () => {
       const outputDir = path.join(tmpDir, 'out');
-      const targetDir = path.join(tmpDir, '.github', 'skills');
+      const targetDir = path.join(outputDir, '.github', 'skills');
       fs.mkdirSync(path.join(outputDir, 'skills', 'skill-a'), { recursive: true });
       fs.writeFileSync(path.join(outputDir, 'skills', 'skill-a', 'README.md'), '');
       fs.writeFileSync(path.join(outputDir, '.npmdata'), 'skills/skill-a/README.md|pkg|1.0.0|0\n');
@@ -2195,13 +2245,12 @@ describe('runner', () => {
 
       const entry: NpmdataExtractEntry = {
         package: 'pkg',
-        outputDir: 'out',
-        symlinks: [{ source: 'skills/*', target: '.github/skills' }],
+        output: { path: 'out', symlinks: [{ source: 'skills/*', target: '.github/skills' }] },
       };
 
       applySymlinks(entry, tmpDir);
 
-      const expectedPath = path.join('.github', 'skills', 'skill-a');
+      const expectedPath = path.join('out', '.github', 'skills', 'skill-a');
       expect(logSpy).toHaveBeenCalledWith(`M\t${expectedPath}`);
 
       logSpy.mockRestore();
@@ -2209,7 +2258,7 @@ describe('runner', () => {
 
     it('logs D for removed stale symlinks in git style', () => {
       const outputDir = path.join(tmpDir, 'out');
-      const targetDir = path.join(tmpDir, '.github', 'skills');
+      const targetDir = path.join(outputDir, '.github', 'skills');
       fs.mkdirSync(path.join(outputDir, 'skills', 'skill-a'), { recursive: true });
       fs.writeFileSync(path.join(outputDir, '.npmdata'), '');
       fs.mkdirSync(targetDir, { recursive: true });
@@ -2221,13 +2270,12 @@ describe('runner', () => {
 
       const entry: NpmdataExtractEntry = {
         package: 'pkg',
-        outputDir: 'out',
-        symlinks: [{ source: 'skills/*', target: '.github/skills' }],
+        output: { path: 'out', symlinks: [{ source: 'skills/*', target: '.github/skills' }] },
       };
 
       applySymlinks(entry, tmpDir);
 
-      const expectedPath = path.join('.github', 'skills', 'skill-OLD');
+      const expectedPath = path.join('out', '.github', 'skills', 'skill-OLD');
       expect(logSpy).toHaveBeenCalledWith(`D\t${expectedPath}`);
 
       logSpy.mockRestore();
@@ -2243,9 +2291,8 @@ describe('runner', () => {
 
       const entry: NpmdataExtractEntry = {
         package: 'pkg',
-        outputDir: 'out',
+        output: { path: 'out', symlinks: [{ source: 'skills/*', target: '.github/skills' }] },
         silent: true,
-        symlinks: [{ source: 'skills/*', target: '.github/skills' }],
       };
 
       applySymlinks(entry, tmpDir);
@@ -2277,15 +2324,14 @@ describe('runner', () => {
     });
 
     it('does nothing when entry has no contentReplacements config', () => {
-      const entry: NpmdataExtractEntry = { package: 'pkg', outputDir: './out' };
+      const entry: NpmdataExtractEntry = { package: 'pkg', output: { path: './out' } };
       expect(() => applyContentReplacements(entry, tmpDir)).not.toThrow();
     });
 
     it('does nothing when contentReplacements array is empty', () => {
       const entry: NpmdataExtractEntry = {
         package: 'pkg',
-        outputDir: './out',
-        contentReplacements: [],
+        output: { path: './out', contentReplacements: [] },
       };
       expect(() => applyContentReplacements(entry, tmpDir)).not.toThrow();
     });
@@ -2301,14 +2347,16 @@ describe('runner', () => {
 
       const entry: NpmdataExtractEntry = {
         package: 'pkg',
-        outputDir: './out',
-        contentReplacements: [
-          {
-            files: 'docs/**/*.md',
-            match: '<!-- version: .* -->',
-            replace: '<!-- version: 1.2.3 -->',
-          },
-        ],
+        output: {
+          path: './out',
+          contentReplacements: [
+            {
+              files: 'docs/**/*.md',
+              match: '<!-- version: .* -->',
+              replace: '<!-- version: 1.2.3 -->',
+            },
+          ],
+        },
       };
 
       applyContentReplacements(entry, tmpDir);
@@ -2327,8 +2375,10 @@ describe('runner', () => {
 
       const entry: NpmdataExtractEntry = {
         package: 'pkg',
-        outputDir: './out',
-        contentReplacements: [{ files: '*.md', match: 'TOKEN', replace: 'REPLACED' }],
+        output: {
+          path: './out',
+          contentReplacements: [{ files: '*.md', match: 'TOKEN', replace: 'REPLACED' }],
+        },
       };
 
       applyContentReplacements(entry, tmpDir);
@@ -2347,8 +2397,10 @@ describe('runner', () => {
 
       const entry: NpmdataExtractEntry = {
         package: 'pkg',
-        outputDir: './out',
-        contentReplacements: [{ files: '*.md', match: 'TOKEN', replace: 'REPLACED' }],
+        output: {
+          path: './out',
+          contentReplacements: [{ files: '*.md', match: 'TOKEN', replace: 'REPLACED' }],
+        },
       };
 
       applyContentReplacements(entry, tmpDir);
@@ -2364,8 +2416,10 @@ describe('runner', () => {
 
       const entry: NpmdataExtractEntry = {
         package: 'pkg',
-        outputDir: './out',
-        contentReplacements: [{ files: '*.md', match: '(hello) (world)', replace: '$2 $1' }],
+        output: {
+          path: './out',
+          contentReplacements: [{ files: '*.md', match: '(hello) (world)', replace: '$2 $1' }],
+        },
       };
 
       applyContentReplacements(entry, tmpDir);
@@ -2395,7 +2449,7 @@ describe('runner', () => {
     });
 
     it('returns an empty array when no contentReplacements are defined', () => {
-      const entry: NpmdataExtractEntry = { package: 'pkg', outputDir: './out' };
+      const entry: NpmdataExtractEntry = { package: 'pkg', output: { path: './out' } };
       expect(checkContentReplacements(entry, tmpDir)).toEqual([]);
     });
 
@@ -2407,10 +2461,12 @@ describe('runner', () => {
 
       const entry: NpmdataExtractEntry = {
         package: 'pkg',
-        outputDir: './out',
-        contentReplacements: [
-          { files: '*.md', match: '<!-- version: .* -->', replace: '<!-- version: 1.2.3 -->' },
-        ],
+        output: {
+          path: './out',
+          contentReplacements: [
+            { files: '*.md', match: '<!-- version: .* -->', replace: '<!-- version: 1.2.3 -->' },
+          ],
+        },
       };
 
       // No further changes needed – regex matches but replacement string equals its own output.
@@ -2428,10 +2484,12 @@ describe('runner', () => {
 
       const entry: NpmdataExtractEntry = {
         package: 'pkg',
-        outputDir: './out',
-        contentReplacements: [
-          { files: '*.md', match: '<!-- version: 0.0.0 -->', replace: '<!-- version: 1.0.0 -->' },
-        ],
+        output: {
+          path: './out',
+          contentReplacements: [
+            { files: '*.md', match: '<!-- version: 0.0.0 -->', replace: '<!-- version: 1.0.0 -->' },
+          ],
+        },
       };
 
       const outOfSync = checkContentReplacements(entry, tmpDir);
@@ -2447,8 +2505,10 @@ describe('runner', () => {
 
       const entry: NpmdataExtractEntry = {
         package: 'pkg',
-        outputDir: './out',
-        contentReplacements: [{ files: '*.md', match: 'MARKER', replace: 'REPLACED' }],
+        output: {
+          path: './out',
+          contentReplacements: [{ files: '*.md', match: 'MARKER', replace: 'REPLACED' }],
+        },
       };
 
       const outOfSync = checkContentReplacements(entry, tmpDir);
@@ -2462,8 +2522,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a' },
-            { package: 'pkg-b', outputDir: './b' },
+            { package: 'pkg-a', output: { path: './a' } },
+            { package: 'pkg-b', output: { path: './b' } },
           ],
         },
       });
@@ -2481,8 +2541,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a' },
-            { package: 'pkg-b', outputDir: './b' },
+            { package: 'pkg-a', output: { path: './a' } },
+            { package: 'pkg-b', output: { path: './b' } },
           ],
         },
       });
@@ -2501,7 +2561,7 @@ describe('runner', () => {
     it('does not write "Total extracted" for a single extract entry', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'pkg-a', outputDir: './a' }] },
+        npmdata: { sets: [{ package: 'pkg-a', output: { path: './a' } }] },
       });
       mockExecSync.mockReturnValue(
         'Extraction complete: 2 added, 0 modified, 0 deleted, 0 skipped',
@@ -2520,8 +2580,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a' },
-            { package: 'pkg-b', outputDir: './b' },
+            { package: 'pkg-a', output: { path: './a' } },
+            { package: 'pkg-b', output: { path: './b' } },
           ],
         },
       });
@@ -2539,8 +2599,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a' },
-            { package: 'pkg-b', outputDir: './b' },
+            { package: 'pkg-a', output: { path: './a' } },
+            { package: 'pkg-b', output: { path: './b' } },
           ],
         },
       });
@@ -2557,7 +2617,7 @@ describe('runner', () => {
     it('does not write "Total purged" for a single purge entry', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'pkg-a', outputDir: './a' }] },
+        npmdata: { sets: [{ package: 'pkg-a', output: { path: './a' } }] },
       });
       mockExecSync.mockReturnValue('Purge complete: 3 deleted');
       const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
@@ -2574,8 +2634,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a' },
-            { package: 'pkg-b', outputDir: './b' },
+            { package: 'pkg-a', output: { path: './a' } },
+            { package: 'pkg-b', output: { path: './b' } },
           ],
         },
       });
@@ -2594,8 +2654,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a' },
-            { package: 'pkg-b', outputDir: './b' },
+            { package: 'pkg-a', output: { path: './a' } },
+            { package: 'pkg-b', output: { path: './b' } },
           ],
         },
       });
@@ -2613,8 +2673,8 @@ describe('runner', () => {
         name: 'my-pkg',
         npmdata: {
           sets: [
-            { package: 'pkg-a', outputDir: './a' },
-            { package: 'pkg-b', outputDir: './b' },
+            { package: 'pkg-a', output: { path: './a' } },
+            { package: 'pkg-b', output: { path: './b' } },
           ],
         },
       });
@@ -2630,7 +2690,7 @@ describe('runner', () => {
     it('does not write "Total checked" for a single check entry', () => {
       setupPackageJson({
         name: 'my-pkg',
-        npmdata: { sets: [{ package: 'pkg-a', outputDir: './a' }] },
+        npmdata: { sets: [{ package: 'pkg-a', output: { path: './a' } }] },
       });
       const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
 
@@ -2645,8 +2705,8 @@ describe('runner', () => {
   describe('runEntries', () => {
     const CLI_PATH = '/fake/npmdata/dist/main.js';
     const entries: NpmdataExtractEntry[] = [
-      { package: 'pkg-a', outputDir: './a' },
-      { package: 'pkg-b', outputDir: './b' },
+      { package: 'pkg-a', output: { path: './a' } },
+      { package: 'pkg-b', output: { path: './b' } },
     ];
 
     it('invokes execSync once per entry for extract action', () => {
@@ -2662,7 +2722,7 @@ describe('runner', () => {
       mockExecSync.mockReturnValue(Buffer.from('All files are in sync\n') as any);
 
       runEntries(
-        [{ package: 'pkg-a', outputDir: './a' }],
+        [{ package: 'pkg-a', output: { path: './a' } }],
         'check',
         ['node', 'script.js', 'check'],
         CLI_PATH,
@@ -2679,7 +2739,7 @@ describe('runner', () => {
       mockExecSync.mockReturnValue('Purge complete: 0 deleted\n' as any);
 
       runEntries(
-        [{ package: 'pkg-a', outputDir: './a' }],
+        [{ package: 'pkg-a', output: { path: './a' } }],
         'purge',
         ['node', 'script.js', 'purge'],
         CLI_PATH,
@@ -2692,7 +2752,7 @@ describe('runner', () => {
 
     it('uses the provided cliPath in the generated command', () => {
       runEntries(
-        [{ package: 'pkg-a', outputDir: '.' }],
+        [{ package: 'pkg-a', output: { path: '.' } }],
         'extract',
         ['node', 'script.js', 'extract'],
         CLI_PATH,
@@ -2703,8 +2763,8 @@ describe('runner', () => {
 
     it('filters entries by --presets when provided in argv', () => {
       const taggedEntries: NpmdataExtractEntry[] = [
-        { package: 'pkg-a', outputDir: './a', presets: ['docs'] },
-        { package: 'pkg-b', outputDir: './b', presets: ['data'] },
+        { package: 'pkg-a', output: { path: './a' }, presets: ['docs'] },
+        { package: 'pkg-b', output: { path: './b' }, presets: ['data'] },
       ];
 
       runEntries(
@@ -2736,7 +2796,7 @@ describe('runner', () => {
 
       expect(() =>
         runEntries(
-          [{ package: 'pkg-a', outputDir: '.' }],
+          [{ package: 'pkg-a', output: { path: '.' } }],
           'extract',
           ['node', 'script.js', 'extract'],
           CLI_PATH,
@@ -2753,7 +2813,7 @@ describe('runner', () => {
       setupPackageJson({
         name: 'my-pkg',
         npmdata: {
-          sets: [{ package: 'my-pkg', outputDir: '.' }],
+          sets: [{ package: 'my-pkg', output: { path: '.' } }],
           postExtractScript: 'node postExtract.js',
         },
       });
@@ -2769,7 +2829,7 @@ describe('runner', () => {
       setupPackageJson({
         name: 'my-pkg',
         npmdata: {
-          sets: [{ package: 'my-pkg', outputDir: '.' }],
+          sets: [{ package: 'my-pkg', output: { path: '.' } }],
           postExtractScript: 'node postExtract.js',
         },
       });
@@ -2798,7 +2858,7 @@ describe('runner', () => {
       setupPackageJson({
         name: 'my-pkg',
         npmdata: {
-          sets: [{ package: 'my-pkg', outputDir: '.' }],
+          sets: [{ package: 'my-pkg', output: { path: '.' } }],
           postExtractScript: 'node postExtract.js',
         },
       });
@@ -2813,7 +2873,7 @@ describe('runner', () => {
       setupPackageJson({
         name: 'my-pkg',
         npmdata: {
-          sets: [{ package: 'my-pkg', outputDir: '.' }],
+          sets: [{ package: 'my-pkg', output: { path: '.' } }],
           postExtractScript: 'node postExtract.js',
         },
       });
@@ -2828,7 +2888,7 @@ describe('runner', () => {
       setupPackageJson({
         name: 'my-pkg',
         npmdata: {
-          sets: [{ package: 'my-pkg', outputDir: '.' }],
+          sets: [{ package: 'my-pkg', output: { path: '.' } }],
           postExtractScript: 'node postExtract.js',
         },
       });
@@ -2846,7 +2906,7 @@ describe('runner', () => {
       setupPackageJson({
         name: 'my-pkg',
         npmdata: {
-          sets: [{ package: 'my-pkg', outputDir: '.' }],
+          sets: [{ package: 'my-pkg', output: { path: '.' } }],
           postExtractScript: 'node postExtract.js',
         },
       });
@@ -2869,7 +2929,7 @@ describe('runner', () => {
 
   describe('runEntries \u2013 postExtractScript', () => {
     const CLI_PATH = '/fake/npmdata/dist/main.js';
-    const entries: NpmdataExtractEntry[] = [{ package: 'pkg-a', outputDir: './a' }];
+    const entries: NpmdataExtractEntry[] = [{ package: 'pkg-a', output: { path: './a' } }];
 
     it('runs postExtractScript after extract when provided', () => {
       runEntries(entries, 'extract', ['node', 'script.js', 'extract'], CLI_PATH, 'node post.js');
