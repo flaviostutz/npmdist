@@ -1,3 +1,6 @@
+/* eslint-disable functional/no-let */
+/* eslint-disable prefer-destructuring */
+/* eslint-disable no-undefined */
 /* eslint-disable no-restricted-syntax */
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -6,7 +9,7 @@ import path from 'node:path';
 import { minimatch } from 'minimatch';
 
 import { NpmdataConfig, NpmdataExtractEntry } from './types';
-import { parsePackageSpec, readCsvMarker } from './utils';
+import { parsePackageSpec, readCsvMarker, loadInstalledPackageNpmdataConfig } from './utils';
 
 type PackageJson = {
   name: string;
@@ -22,10 +25,186 @@ function parseEntryPackageName(spec: string): { name: string } {
   return { name };
 }
 
+// ─── Cascade config resolution ─────────────────────────────────────────────────
+
+/**
+ * One level in the npmdata cascade chain, representing the combined selector and
+ * output configuration contributed by a single installed package's npmdata config.
+ *
+ * Levels are ordered from the deepest dependency (farthest from the consumer) to
+ * the immediate source package.  A consumer entry is then applied on top.
+ */
+export type CascadeLevel = {
+  /** The package whose npmdata config contributed this level. */
+  packageName: string;
+  /**
+   * Combined glob patterns from all sets in this package's npmdata config.
+   * When undefined the package's config imposed no file filter at this level.
+   */
+  files?: string[];
+  /**
+   * Combined content-regex strings from all sets in this package's npmdata config.
+   * When undefined the package's config imposed no content filter at this level.
+   */
+  contentRegexes?: string[];
+  /** Output boolean flags merged from the package's sets (last-defined-wins within the set list). */
+  force?: boolean;
+  keepExisting?: boolean;
+  gitignore?: boolean;
+  unmanaged?: boolean;
+  dryRun?: boolean;
+};
+
+/**
+ * Recursively build a cascade chain by walking the npmdata configs of installed packages
+ * starting from `packageName`.
+ *
+ * The chain is built depth-first (deepest dependency first):
+ *   [D_level, C_level, B_level]
+ * so that merging left-to-right gives precedence to shallower (closer) packages.
+ *
+ * Circular dependencies are broken by the `visited` set.
+ *
+ * @param packageName - The package whose npmdata config should be read.
+ * @param cwd         - Working directory used to locate node_modules.
+ * @param visited     - Set of already-visited package names (prevents cycles).
+ */
+export function buildCascadeChain(
+  packageName: string,
+  cwd: string,
+  visited: Set<string> = new Set(),
+): CascadeLevel[] {
+  if (visited.has(packageName)) return [];
+  // eslint-disable-next-line functional/immutable-data
+  visited.add(packageName);
+
+  const npmdataConfig = loadInstalledPackageNpmdataConfig(packageName, cwd);
+  if (!npmdataConfig) return [];
+
+  const chain: CascadeLevel[] = [];
+
+  // Collect unique package names referenced in B's sets and recurse into them first
+  // (depth-first, deepest dependency goes first in the chain).
+  const seenDeps = new Set<string>();
+  for (const set of npmdataConfig.sets) {
+    const { name: depName } = parsePackageSpec(set.package);
+    // Avoid recursing into self-referential entries or already-processed deps.
+    if (depName !== packageName && !seenDeps.has(depName) && !visited.has(depName)) {
+      seenDeps.add(depName);
+      const depChain = buildCascadeChain(depName, cwd, new Set(visited));
+      // eslint-disable-next-line functional/immutable-data
+      chain.push(...depChain);
+    }
+  }
+
+  // Build this package's combined level from all its sets.
+  const allFiles = npmdataConfig.sets.flatMap((s) => s.selector?.files ?? []);
+  const allContentRegexes = npmdataConfig.sets.flatMap((s) => s.selector?.contentRegexes ?? []);
+
+  // For output booleans, iterate through all sets and last-defined-wins.
+  let force: boolean | undefined;
+  let keepExisting: boolean | undefined;
+  let gitignore: boolean | undefined;
+  let unmanaged: boolean | undefined;
+  let dryRun: boolean | undefined;
+
+  for (const set of npmdataConfig.sets) {
+    // eslint-disable-next-line no-undefined
+    if (set.output.force !== undefined) force = set.output.force;
+    // eslint-disable-next-line no-undefined
+    if (set.output.keepExisting !== undefined) keepExisting = set.output.keepExisting;
+    // eslint-disable-next-line no-undefined
+    if (set.output.gitignore !== undefined) gitignore = set.output.gitignore;
+    // eslint-disable-next-line no-undefined
+    if (set.output.unmanaged !== undefined) unmanaged = set.output.unmanaged;
+    // eslint-disable-next-line no-undefined
+    if (set.output.dryRun !== undefined) dryRun = set.output.dryRun;
+  }
+
+  // eslint-disable-next-line functional/immutable-data
+  chain.push({
+    packageName,
+    files: allFiles.length > 0 ? allFiles : undefined,
+    contentRegexes: allContentRegexes.length > 0 ? allContentRegexes : undefined,
+    force,
+    keepExisting,
+    gitignore,
+    unmanaged,
+    dryRun,
+  });
+
+  return chain;
+}
+
+/**
+ * Merge a cascade chain (built via buildCascadeChain) with a consumer entry and return:
+ * - cascadeFileSets      – file pattern sets from the chain (deepest first), to be passed
+ *                          as --cascade-files flags so the subprocess can apply AND-per-level
+ *                          filtering.  A's own selector.files are NOT included here (they are
+ *                          passed via the normal --files flag).
+ * - cascadeContentRegexSets – analogous sets for content regexes.
+ * - mergedOutput         – output config with chain booleans merged as defaults (A wins).
+ *
+ * The cascade chain is ordered [deepest, ..., shallowest], so merging left-to-right gives
+ * precedence to shallower (closer) levels, with A's entry having the final say.
+ */
+export function mergeCascadeChainWithEntry(
+  chain: CascadeLevel[],
+  entry: NpmdataExtractEntry,
+): {
+  cascadeFileSets: string[][];
+  cascadeContentRegexSets: string[][];
+  mergedOutput: typeof entry.output;
+} {
+  // Collect non-empty file/content-regex sets from the chain.
+  const cascadeFileSets = chain
+    .filter((level) => level.files && level.files.length > 0)
+    .map((level) => level.files as string[]);
+
+  const cascadeContentRegexSets = chain
+    .filter((level) => level.contentRegexes && level.contentRegexes.length > 0)
+    .map((level) => level.contentRegexes as string[]);
+
+  // Merge output booleans: iterate chain from deepest to shallowest so later entries override.
+  let force: boolean | undefined;
+  let keepExisting: boolean | undefined;
+  let gitignore: boolean | undefined;
+  let unmanaged: boolean | undefined;
+  let dryRun: boolean | undefined;
+
+  for (const level of chain) {
+    // eslint-disable-next-line no-undefined
+    if (level.force !== undefined) force = level.force;
+    // eslint-disable-next-line no-undefined
+    if (level.keepExisting !== undefined) keepExisting = level.keepExisting;
+    // eslint-disable-next-line no-undefined
+    if (level.gitignore !== undefined) gitignore = level.gitignore;
+    // eslint-disable-next-line no-undefined
+    if (level.unmanaged !== undefined) unmanaged = level.unmanaged;
+    // eslint-disable-next-line no-undefined
+    if (level.dryRun !== undefined) dryRun = level.dryRun;
+  }
+
+  // A's own entry.output has final precedence over the cascade defaults.
+  const mergedOutput = {
+    ...entry.output,
+    force: entry.output.force !== undefined ? entry.output.force : force,
+    keepExisting:
+      entry.output.keepExisting !== undefined ? entry.output.keepExisting : keepExisting,
+    gitignore: entry.output.gitignore !== undefined ? entry.output.gitignore : gitignore,
+    unmanaged: entry.output.unmanaged !== undefined ? entry.output.unmanaged : unmanaged,
+    dryRun: entry.output.dryRun !== undefined ? entry.output.dryRun : dryRun,
+  };
+
+  return { cascadeFileSets, cascadeContentRegexSets, mergedOutput };
+}
+
 function buildExtractCommand(
   cliPath: string,
   entry: NpmdataExtractEntry,
   cwd: string = process.cwd(),
+  cascadeFileSets?: string[][],
+  cascadeContentRegexSets?: string[][],
 ): string {
   const outputFlag = ` --output "${path.resolve(cwd, entry.output.path)}"`;
   const forceFlag = entry.output?.force ? ' --force' : '';
@@ -44,7 +223,13 @@ function buildExtractCommand(
     entry.selector?.contentRegexes && entry.selector.contentRegexes.length > 0
       ? ` --content-regex "${entry.selector.contentRegexes.join(',')}"`
       : '';
-  return `node "${cliPath}" extract --packages "${entry.package}"${outputFlag}${forceFlag}${keepExistingFlag}${gitignoreFlag}${unmanagedFlag}${silentFlag}${verboseFlag}${dryRunFlag}${upgradeFlag}${filesFlag}${contentRegexFlag}`;
+  const cascadeFilesFlags = (cascadeFileSets ?? [])
+    .map((files) => ` --cascade-files "${files.join(',')}"`)
+    .join('');
+  const cascadeContentRegexFlags = (cascadeContentRegexSets ?? [])
+    .map((regexes) => ` --cascade-content-regex "${regexes.join(',')}"`)
+    .join('');
+  return `node "${cliPath}" extract --packages "${entry.package}"${outputFlag}${forceFlag}${keepExistingFlag}${gitignoreFlag}${unmanagedFlag}${silentFlag}${verboseFlag}${dryRunFlag}${upgradeFlag}${filesFlag}${contentRegexFlag}${cascadeFilesFlags}${cascadeContentRegexFlags}`;
 }
 
 /**
@@ -581,11 +766,27 @@ function runExtract(
       process.stdout.write('\n');
     }
     entryIndex += 1;
+
+    // Resolve the cascade chain from the source package's npmdata config (and its deps).
+    const { name: entryPackageName } = parseEntryPackageName(entry.package);
+    const cascadeChain = buildCascadeChain(entryPackageName, runCwd);
+    const { cascadeFileSets, cascadeContentRegexSets, mergedOutput } = mergeCascadeChainWithEntry(
+      cascadeChain,
+      entry,
+    );
+
+    if (verboseFromArgv && cascadeChain.length > 0) {
+      // eslint-disable-next-line no-console
+      console.log(
+        `[verbose] extract: cascade chain for ${entry.package}: [${cascadeChain.map((l) => l.packageName).join(' -> ')}]`,
+      );
+    }
+
     const effectiveEntry: NpmdataExtractEntry = {
       ...entry,
       output: {
-        ...entry.output,
-        dryRun: entry.output?.dryRun || dryRunFromArgv,
+        ...mergedOutput,
+        dryRun: mergedOutput?.dryRun || dryRunFromArgv,
         ...(noGitignoreFromArgv ? { gitignore: false } : {}),
         ...(unmanagedFromArgv ? { unmanaged: true } : {}),
       },
@@ -599,7 +800,13 @@ function runExtract(
       );
     }
     fs.mkdirSync(path.resolve(runCwd, entry.output.path), { recursive: true });
-    const command = buildExtractCommand(cliPath, effectiveEntry, runCwd);
+    const command = buildExtractCommand(
+      cliPath,
+      effectiveEntry,
+      runCwd,
+      cascadeFileSets,
+      cascadeContentRegexSets,
+    );
     if (verboseFromArgv) {
       // eslint-disable-next-line no-console
       console.log(`[verbose] extract: running command: ${command}`);

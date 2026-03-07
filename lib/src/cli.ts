@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+/* eslint-disable no-undefined */
+/* eslint-disable functional/immutable-data */
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-plusplus */
 /* eslint-disable functional/no-let */
@@ -299,6 +301,10 @@ export async function cli(processArgs: string[], cliPath?: string): Promise<numb
   let contentRegexes: string | undefined;
   let outDir = process.cwd();
   let outputFlagProvided = false;
+  // Cascade filter sets collected from --cascade-files / --cascade-content-regex flags,
+  // ordered from deepest dependency to the immediate source package.
+  const cascadeFileSets: string[][] = [];
+  const cascadeContentRegexSets: string[][] = [];
 
   for (let i = argsOffset; i < args.length; i++) {
     if (args[i] === '--packages') {
@@ -323,6 +329,12 @@ export async function cli(processArgs: string[], cliPath?: string): Promise<numb
       filenamePatterns = args[++i];
     } else if (args[i] === '--content-regex') {
       contentRegexes = args[++i];
+    } else if (args[i] === '--cascade-files') {
+      // eslint-disable-next-line no-plusplus
+      cascadeFileSets.push(args[++i].split(',').map((p) => p.trim()));
+    } else if (args[i] === '--cascade-content-regex') {
+      // eslint-disable-next-line no-plusplus
+      cascadeContentRegexSets.push(args[++i].split(',').map((r) => r.trim()));
     } else if (args[i] === '--output' || args[i] === '-o') {
       outDir = args[++i];
       outputFlagProvided = true;
@@ -442,6 +454,9 @@ export async function cli(processArgs: string[], cliPath?: string): Promise<numb
       ? contentRegexes.split(',').map((r) => new RegExp(r))
       : // eslint-disable-next-line no-undefined
         undefined,
+    cascadeFilenamePatternSets: cascadeFileSets.length > 0 ? cascadeFileSets : undefined,
+    cascadeContentRegexSets:
+      cascadeContentRegexSets.length > 0 ? cascadeContentRegexSets : undefined,
   };
 
   if (command === 'extract') {

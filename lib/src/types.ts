@@ -165,6 +165,25 @@ export type ConsumerConfig = FileFilterConfig & {
    * are not incorrectly reported as out of sync.
    */
   contentReplacements?: ContentReplacementConfig[];
+
+  /**
+   * Cascade filename pattern sets collected from the npmdata configs of the
+   * dependency chain (e.g. the source package B, then its dependency C, etc.).
+   * Each inner array is one dependency-level's glob patterns.
+   * A file is included only when it passes EVERY level's pattern set
+   * (AND semantics across levels; within a single level the existing OR semantics apply).
+   * Ordered from deepest dependency (first element) to the immediate source package (last element).
+   * Populated automatically by the runner when the source package has an npmdata config.
+   */
+  cascadeFilenamePatternSets?: string[][];
+
+  /**
+   * Cascade content-regex sets collected from the npmdata configs of the
+   * dependency chain, analogous to cascadeFilenamePatternSets.
+   * Each inner array contains regex strings for one dependency level.
+   * A file is included only when its content matches at least one regex from EACH level.
+   */
+  cascadeContentRegexSets?: string[][];
 };
 
 /**

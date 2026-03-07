@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 
 import { minimatch } from 'minimatch';
 
-import { ManagedFileMetadata } from './types';
+import { ManagedFileMetadata, NpmdataConfig } from './types';
 
 /**
  * Parse a package spec like "my-pkg@^1.2.3" or "@scope/pkg@2.x" into name and version.
@@ -258,4 +258,37 @@ export function writeCsvMarker(filePath: string, data: ManagedFileMetadata[]): v
   );
   fs.writeFileSync(filePath, `${rows.join('\n')}\n`, 'utf8');
   fs.chmodSync(filePath, 0o444);
+}
+/**
+ * Load the npmdata config from an installed package's package.json.
+ * Returns the NpmdataConfig when the package is installed and has a valid "npmdata.sets" array,
+ * or null when the package is not installed or has no npmdata configuration.
+ *
+ * When cwd is provided the package is looked up under <cwd>/node_modules/<packageName>;
+ * otherwise require.resolve is used with the default module resolution.
+ */
+export function loadInstalledPackageNpmdataConfig(
+  packageName: string,
+  cwd?: string,
+): NpmdataConfig | null {
+  // eslint-disable-next-line functional/no-try-statements
+  try {
+    const pkgJsonPath = cwd
+      ? path.join(cwd, 'node_modules', packageName, 'package.json')
+      : require.resolve(`${packageName}/package.json`);
+
+    const pkgContent = fs.readFileSync(pkgJsonPath);
+    const pkg = JSON.parse(pkgContent.toString());
+    const cfg = pkg.npmdata as NpmdataConfig | undefined;
+
+    if (cfg && Array.isArray(cfg.sets) && cfg.sets.length > 0) {
+      return cfg;
+    }
+    // eslint-disable-next-line unicorn/no-null
+    return null;
+  } catch {
+    // Package not installed or package.json unreadable
+    // eslint-disable-next-line unicorn/no-null
+    return null;
+  }
 }

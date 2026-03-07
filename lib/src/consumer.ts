@@ -42,6 +42,30 @@ const GITIGNORE_START = '# npmdata:start';
 const GITIGNORE_END = '# npmdata:end';
 
 /**
+ * Check whether a file path passes every cascade pattern set (AND semantics across levels).
+ * Within each level the existing OR / not-exclude semantics of matchesFilenamePattern apply.
+ * When patternSets is undefined or empty every file passes.
+ */
+function matchesCascadePatternSets(filename: string, patternSets?: string[][]): boolean {
+  if (!patternSets || patternSets.length === 0) return true;
+  return patternSets.every((patterns) => matchesFilenamePattern(filename, patterns));
+}
+
+/**
+ * Check whether a file's content satisfies every cascade content-regex set (AND semantics
+ * across levels).  Within each level the file must match at least one regex (OR).
+ * When sets is undefined or empty every file passes.
+ */
+function matchesCascadeContentRegexSets(filePath: string, sets?: string[][]): boolean {
+  if (!sets || sets.length === 0) return true;
+  return sets.every((levelRegexes) => {
+    const compiled = levelRegexes.map((r) => new RegExp(r));
+    const content = fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : '';
+    return compiled.some((re) => re.test(content));
+  });
+}
+
+/**
  * Read the .gitignore at dir and return parsed patterns, excluding the npmdata-managed
  * section.  These are the "external" patterns (e.g. node_modules, dist) that were written
  * by the project author rather than by npmdata itself.
@@ -500,7 +524,9 @@ async function extractFiles(
           packageFile.relPath,
           config.filenamePatterns ?? DEFAULT_FILENAME_PATTERNS,
         ) ||
-        !matchesContentRegex(packageFile.fullPath, config.contentRegexes)
+        !matchesCascadePatternSets(packageFile.relPath, config.cascadeFilenamePatternSets) ||
+        !matchesContentRegex(packageFile.fullPath, config.contentRegexes) ||
+        !matchesCascadeContentRegexSets(packageFile.fullPath, config.cascadeContentRegexSets)
       ) {
         continue;
       }
@@ -794,8 +820,10 @@ export async function check(config: ConsumerConfig): Promise<CheckResult> {
     // Load marker entries for this package and apply the --files filter
     const markerFiles = loadAllManagedFiles(config.outputDir)
       .filter((m) => m.packageName === name)
-      .filter((m) =>
-        matchesFilenamePattern(m.path, config.filenamePatterns ?? DEFAULT_FILENAME_PATTERNS),
+      .filter(
+        (m) =>
+          matchesFilenamePattern(m.path, config.filenamePatterns ?? DEFAULT_FILENAME_PATTERNS) &&
+          matchesCascadePatternSets(m.path, config.cascadeFilenamePatternSets),
       );
     const markerPaths = new Set(markerFiles.map((m) => m.path));
 
@@ -808,7 +836,9 @@ export async function check(config: ConsumerConfig): Promise<CheckResult> {
     const filteredPackageFiles = packageFiles.filter(
       (f) =>
         matchesFilenamePattern(f.relPath, config.filenamePatterns ?? DEFAULT_FILENAME_PATTERNS) &&
-        matchesContentRegex(f.fullPath, config.contentRegexes),
+        matchesCascadePatternSets(f.relPath, config.cascadeFilenamePatternSets) &&
+        matchesContentRegex(f.fullPath, config.contentRegexes) &&
+        matchesCascadeContentRegexSets(f.fullPath, config.cascadeContentRegexSets),
     );
     const effectiveCwd = config.cwd ?? process.cwd();
     const packageHashMap = new Map(
