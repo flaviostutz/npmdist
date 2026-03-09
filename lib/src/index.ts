@@ -12,7 +12,7 @@ export type { ListOptions } from './package/action-list';
 export { actionPurge } from './package/action-purge';
 export type { PurgeOptions, PurgeSummary } from './package/action-purge';
 
-export { main } from './main';
+export { binpkg } from './cli/binpkg';
 
 export type {
   NpmdataConfig,

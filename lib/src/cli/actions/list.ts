@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 import { NpmdataConfig } from '../../types';
-import { parseArgv } from '../argv';
+import { parseArgv, buildEntriesFromArgv } from '../argv';
 import { printUsage } from '../usage';
 import { actionList } from '../../package/action-list';
 
@@ -20,27 +20,22 @@ export async function runList(
 
   const parsed = parseArgv(argv);
 
-  const entries = config?.sets ?? [];
+  const entries = buildEntriesFromArgv(parsed) ?? config?.sets ?? [];
 
-  try {
-    const files = await actionList({
-      entries,
-      config,
-      cwd,
-      output: parsed.output,
-      verbose: parsed.verbose,
-    });
+  const files = await actionList({
+    entries,
+    config,
+    cwd,
+    output: parsed.output,
+    verbose: parsed.verbose,
+  });
 
-    if (files.length === 0) {
-      if (parsed.verbose) console.log('No managed files found.');
-    } else {
-      for (const f of files) {
-        console.log(`${f.path}  ${f.packageName}@${f.packageVersion}`);
-      }
+  if (files.length === 0) {
+    if (parsed.verbose) console.log('No managed files found.');
+  } else {
+    for (const f of files) {
+      console.log(`${f.path}  ${f.packageName}@${f.packageVersion}`);
     }
-    // list always exits 0
-  } catch (error: unknown) {
-    console.error(`Error: ${(error as Error).message}`);
-    process.exitCode = 1;
   }
+  // list always exits 0
 }

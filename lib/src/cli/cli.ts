@@ -14,10 +14,11 @@ const KNOWN_COMMANDS = new Set(['extract', 'check', 'list', 'purge', 'init']);
  * Top-level CLI router.
  * Detects command from argv, loads config, and dispatches to appropriate handler.
  *
- * @param argv - Process argument vector (argv[0] = node, argv[1] = script).
- * @param cwd  - Working directory override (defaults to process.cwd()).
+ * @param argv      - Process argument vector (argv[0] = node, argv[1] = script).
+ * @param cwd       - Working directory for output path resolution (defaults to process.cwd()).
+ * @param configCwd - Directory to search for npmdata config (defaults to cwd).
  */
-export async function cli(argv: string[], cwd?: string): Promise<void> {
+export async function cli(argv: string[], cwd?: string, configCwd?: string): Promise<void> {
   const args = argv.slice(2); // strip node + script
 
   // Handle global --help with no command
@@ -46,9 +47,12 @@ export async function cli(argv: string[], cwd?: string): Promise<void> {
     cmdArgs = args;
   }
 
-  // Load config from cwd
+  // Load config from cwd, unless --packages is specified (CLI-only mode)
   const effectiveCwd = cwd ?? process.cwd();
-  const config = await loadNpmdataConfig(effectiveCwd);
+  const effectiveConfigCwd = configCwd ?? effectiveCwd;
+  const config = cmdArgs.includes('--packages')
+    ? null // eslint-disable-line unicorn/no-null
+    : await loadNpmdataConfig(effectiveConfigCwd);
 
   switch (action) {
     case 'extract':
@@ -67,7 +71,6 @@ export async function cli(argv: string[], cwd?: string): Promise<void> {
       await runInit(config, cmdArgs, effectiveCwd);
       break;
     default:
-      console.error(`Unknown command: ${action}`);
-      process.exitCode = 1;
+      throw new Error(`Unknown command: ${action}`);
   }
 }

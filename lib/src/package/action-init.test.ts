@@ -32,7 +32,7 @@ describe('actionInit', () => {
     const binPath = path.join(outputDir, 'bin', 'npmdata.js');
     expect(fs.existsSync(binPath)).toBe(true);
     const content = fs.readFileSync(binPath, 'utf8');
-    expect(content).toContain("require('npmdata').main");
+    expect(content).toContain("require('npmdata').binpkg(__dirname, process.argv.slice(2))");
   });
 
   it('updates existing package.json without throwing', async () => {

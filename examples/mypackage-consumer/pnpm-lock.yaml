@@ -202,7 +202,7 @@ packages:
     engines: {node: '>=0.10.0'}
 
   example-files-package@file:../mypackage/dist/example-files-package-1.0.0.tgz:
-    resolution: {integrity: sha512-H/39eDVkTOL0oY3m5+f1bTlS6s9NVfygPgQ7FZX2mWi0zKF+6jgOwXcqm/bW7l+6uCzmgZ6/ZuxSzZP3xvp0YQ==, tarball: file:../mypackage/dist/example-files-package-1.0.0.tgz}
+    resolution: {integrity: sha512-FXiKa5fS/cZFJ6Dbe0z0HZbea+4HWQtwKWFSqKSZSLgUzWWXtTw9RRVUHJx8MHQfqSt6QAXUBAv0GaqLMtR6KQ==, tarball: file:../mypackage/dist/example-files-package-1.0.0.tgz}
     version: 1.0.0
     hasBin: true
 
@@ -349,7 +349,7 @@ packages:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
 
   npmdata@file:../../lib/dist/npmdata-0.0.1.tgz:
-    resolution: {integrity: sha512-0dAMVxJUyov0IzGgfnS5oDe+qIrb/BbXZkBnlNlT/G5Xhshx382bqWT49/T6gvWZF3YDEolm2BiiG32R8WJPMQ==, tarball: file:../../lib/dist/npmdata-0.0.1.tgz}
+    resolution: {integrity: sha512-XVUi+2hxf49WllzDDMnX1VdSM6SO6VXPgRlzlCEhOjPOxGU5zs+v7peQt1APBKc8SqW2DneeQ+63q6sZlH3dDg==, tarball: file:../../lib/dist/npmdata-0.0.1.tgz}
     version: 0.0.1
     hasBin: true
 

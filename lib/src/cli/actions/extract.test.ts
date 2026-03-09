@@ -61,15 +61,13 @@ describe('runExtract — source selection', () => {
     expect(entries[0].package).toBe('config-pkg@1.0.0');
   });
 
-  it('sets exitCode=1 when no --packages and config is null', async () => {
-    await runExtract(null, [], '/cwd');
-    expect(process.exitCode).toBe(1);
+  it('throws when no --packages and config is null', async () => {
+    await expect(runExtract(null, [], '/cwd')).rejects.toThrow('No packages specified');
     expect(mockActionExtract).not.toHaveBeenCalled();
   });
 
-  it('sets exitCode=1 when no --packages and config has empty sets', async () => {
-    await runExtract({ sets: [] }, [], '/cwd');
-    expect(process.exitCode).toBe(1);
+  it('throws when no --packages and config has empty sets', async () => {
+    await expect(runExtract({ sets: [] }, [], '/cwd')).rejects.toThrow('No packages specified');
     expect(mockActionExtract).not.toHaveBeenCalled();
   });
 
@@ -196,16 +194,16 @@ describe('runExtract — preset filtering', () => {
 });
 
 describe('runExtract — error handling', () => {
-  it('sets exitCode=1 and skips actionExtract on invalid argv', async () => {
-    await runExtract(CONFIG_WITH_SETS, ['--force', '--keep-existing'], '/cwd');
-    expect(process.exitCode).toBe(1);
+  it('throws on invalid argv and skips actionExtract', async () => {
+    await expect(
+      runExtract(CONFIG_WITH_SETS, ['--force', '--keep-existing'], '/cwd'),
+    ).rejects.toThrow('--force and --keep-existing are mutually exclusive');
     expect(mockActionExtract).not.toHaveBeenCalled();
   });
 
-  it('sets exitCode=1 when actionExtract throws', async () => {
+  it('propagates error when actionExtract throws', async () => {
     mockActionExtract.mockRejectedValue(new Error('extract failed'));
-    await runExtract(CONFIG_WITH_SETS, [], '/cwd');
-    expect(process.exitCode).toBe(1);
+    await expect(runExtract(CONFIG_WITH_SETS, [], '/cwd')).rejects.toThrow('extract failed');
   });
 });
 
@@ -331,22 +329,24 @@ describe('runExtract — postExtractScript', () => {
     expect(mockExecSync).not.toHaveBeenCalled();
   });
 
-  it('sets exitCode from script exit status on script failure', async () => {
+  it('throws with script exit code in message on script failure', async () => {
     mockExecSync.mockImplementation(() => {
       const err = new Error('script failed') as Error & { status: number };
       err.status = 42;
       throw err;
     });
-    await runExtract(configWithScript, [], '/cwd');
-    expect(process.exitCode).toBe(42);
+    await expect(runExtract(configWithScript, [], '/cwd')).rejects.toThrow(
+      'Post-extract script failed with exit code 42',
+    );
   });
 
-  it('defaults exitCode to 1 when script fails with no status code', async () => {
+  it('throws with exit code 1 when script fails with no status code', async () => {
     mockExecSync.mockImplementation(() => {
       throw new Error('script crashed');
     });
-    await runExtract(configWithScript, [], '/cwd');
-    expect(process.exitCode).toBe(1);
+    await expect(runExtract(configWithScript, [], '/cwd')).rejects.toThrow(
+      'Post-extract script failed with exit code 1',
+    );
   });
 
   it('does not print summary after script failure', async () => {
@@ -354,7 +354,7 @@ describe('runExtract — postExtractScript', () => {
       throw Object.assign(new Error('fail'), { status: 2 });
     });
     const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
-    await runExtract(configWithScript, [], '/cwd');
+    await expect(runExtract(configWithScript, [], '/cwd')).rejects.toThrow();
     spy.mockRestore();
     expect(spy).not.toHaveBeenCalledWith(expect.stringContaining('Extract complete'));
   });

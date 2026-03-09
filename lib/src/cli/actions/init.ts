@@ -28,11 +28,6 @@ export async function runInit(
     packages: packages?.map((p) => (p.version ? `${p.name}@${p.version}` : p.name)),
   };
 
-  try {
-    await actionInit(outputDir, verbose, initConfig);
-    console.log('Init complete. Scaffolded package.json and bin/npmdata.js.');
-  } catch (error: unknown) {
-    console.error(`Error: ${(error as Error).message}`);
-    process.exitCode = 1;
-  }
+  await actionInit(outputDir, verbose, initConfig);
+  console.log('Init complete. Scaffolded package.json and bin/npmdata.js.');
 }

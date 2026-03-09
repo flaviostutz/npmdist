@@ -26,7 +26,7 @@ export async function actionInit(
   const binDir = path.join(outputDir, 'bin');
   const binPath = path.join(binDir, 'npmdata.js');
 
-  const binShim = `#!/usr/bin/env node\n'use strict';\nrequire('npmdata').main(__dirname, process.argv.slice(2));\n`;
+  const binShim = `#!/usr/bin/env node\n'use strict';\nrequire('npmdata').binpkg(__dirname, process.argv.slice(2));\n`;
 
   fs.mkdirSync(outputDir, { recursive: true });
 

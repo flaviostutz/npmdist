@@ -39,9 +39,10 @@ describe('runPurge — --help', () => {
 });
 
 describe('runPurge — argv validation', () => {
-  it('sets exitCode=1 and skips actionPurge on invalid argv (--force + --keep-existing)', async () => {
-    await runPurge(CONFIG, ['--force', '--keep-existing'], '/cwd');
-    expect(process.exitCode).toBe(1);
+  it('throws on invalid argv and skips actionPurge (--force + --keep-existing)', async () => {
+    await expect(runPurge(CONFIG, ['--force', '--keep-existing'], '/cwd')).rejects.toThrow(
+      '--force and --keep-existing are mutually exclusive',
+    );
     expect(mockActionPurge).not.toHaveBeenCalled();
   });
 });
@@ -74,10 +75,17 @@ describe('runPurge — options forwarding', () => {
     expect(callArg.entries[0].package).toBe('my-pkg@1.0.0');
   });
 
-  it('passes empty entries when config is null', async () => {
+  it('passes empty entries when config is null and no --packages given', async () => {
     await runPurge(null, [], '/cwd');
     const callArg = mockActionPurge.mock.calls[0][0];
     expect(callArg.entries).toEqual([]);
+  });
+
+  it('passes entries from --packages when config is null', async () => {
+    await runPurge(null, ['--packages', 'my-pkg@1.0.0', '--output', './out'], '/cwd');
+    const callArg = mockActionPurge.mock.calls[0][0];
+    expect(callArg.entries).toHaveLength(1);
+    expect(callArg.entries[0].package).toBe('my-pkg@1.0.0');
   });
 
   it('passes cwd and config to actionPurge', async () => {
@@ -160,20 +168,13 @@ describe('runPurge — onProgress handler', () => {
 });
 
 describe('runPurge — error handling', () => {
-  it('sets exitCode=1 when actionPurge throws', async () => {
+  it('propagates error when actionPurge throws', async () => {
     mockActionPurge.mockRejectedValue(new Error('purge failed'));
-    await runPurge(CONFIG, [], '/cwd');
-    expect(process.exitCode).toBe(1);
+    await expect(runPurge(CONFIG, [], '/cwd')).rejects.toThrow('purge failed');
   });
 
-  it('logs error message when actionPurge throws', async () => {
+  it('propagates error message when actionPurge throws', async () => {
     mockActionPurge.mockRejectedValue(new Error('something went wrong'));
-    const errors: string[] = [];
-    const spy = jest.spyOn(console, 'error').mockImplementation((...args) => {
-      errors.push(args.join(' '));
-    });
-    await runPurge(CONFIG, [], '/cwd');
-    spy.mockRestore();
-    expect(errors.some((e) => e.includes('something went wrong'))).toBe(true);
+    await expect(runPurge(CONFIG, [], '/cwd')).rejects.toThrow('something went wrong');
   });
 });

@@ -94,10 +94,17 @@ describe('runList — exit code', () => {
 });
 
 describe('runList — options forwarding', () => {
-  it('passes empty entries array when config is null', async () => {
+  it('passes empty entries array when config is null and no --packages given', async () => {
     await runList(null, [], '/cwd');
     const callArg = mockActionList.mock.calls[0][0];
     expect(callArg.entries).toEqual([]);
+  });
+
+  it('passes entries from --packages when config is null', async () => {
+    await runList(null, ['--packages', 'my-pkg@1.0.0', '--output', './out'], '/cwd');
+    const callArg = mockActionList.mock.calls[0][0];
+    expect(callArg.entries).toHaveLength(1);
+    expect(callArg.entries[0].package).toBe('my-pkg@1.0.0');
   });
 
   it('passes config sets as entries', async () => {
@@ -127,20 +134,13 @@ describe('runList — options forwarding', () => {
 });
 
 describe('runList — error handling', () => {
-  it('sets exitCode=1 when actionList throws', async () => {
+  it('propagates error when actionList throws', async () => {
     mockActionList.mockRejectedValue(new Error('list failed'));
-    await runList(CONFIG, [], '/cwd');
-    expect(process.exitCode).toBe(1);
+    await expect(runList(CONFIG, [], '/cwd')).rejects.toThrow('list failed');
   });
 
-  it('logs error message when actionList throws', async () => {
+  it('propagates error message when actionList throws', async () => {
     mockActionList.mockRejectedValue(new Error('something went wrong'));
-    const errors: string[] = [];
-    const spy = jest.spyOn(console, 'error').mockImplementation((...args) => {
-      errors.push(args.join(' '));
-    });
-    await runList(CONFIG, [], '/cwd');
-    spy.mockRestore();
-    expect(errors.some((e) => e.includes('something went wrong'))).toBe(true);
+    await expect(runList(CONFIG, [], '/cwd')).rejects.toThrow('something went wrong');
   });
 });

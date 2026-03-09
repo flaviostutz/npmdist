@@ -39,23 +39,34 @@ describe('runCheck — --help', () => {
 });
 
 describe('runCheck — config validation', () => {
-  it('sets exitCode=1 when config is null', async () => {
-    await runCheck(null, [], '/cwd');
-    expect(process.exitCode).toBe(1);
+  it('throws when config is null and no --packages given', async () => {
+    await expect(runCheck(null, [], '/cwd')).rejects.toThrow('No packages specified');
     expect(mockActionCheck).not.toHaveBeenCalled();
   });
 
-  it('sets exitCode=1 when config has empty sets', async () => {
-    await runCheck({ sets: [] }, [], '/cwd');
-    expect(process.exitCode).toBe(1);
+  it('throws when config has empty sets and no --packages given', async () => {
+    await expect(runCheck({ sets: [] }, [], '/cwd')).rejects.toThrow('No packages specified');
     expect(mockActionCheck).not.toHaveBeenCalled();
+  });
+
+  it('calls actionCheck with entries from --packages when config is null', async () => {
+    await runCheck(
+      null,
+      ['--packages', 'my-pkg@1.0.0', '--output', './out', '--no-gitignore'],
+      '/cwd',
+    );
+    expect(mockActionCheck).toHaveBeenCalled();
+    const callArg = mockActionCheck.mock.calls[0][0];
+    expect(callArg.entries).toHaveLength(1);
+    expect(callArg.entries[0].package).toBe('my-pkg@1.0.0');
   });
 });
 
 describe('runCheck — argv validation', () => {
-  it('sets exitCode=1 and skips actionCheck on invalid argv (--force + --keep-existing)', async () => {
-    await runCheck(CONFIG, ['--force', '--keep-existing'], '/cwd');
-    expect(process.exitCode).toBe(1);
+  it('throws on invalid argv and skips actionCheck (--force + --keep-existing)', async () => {
+    await expect(runCheck(CONFIG, ['--force', '--keep-existing'], '/cwd')).rejects.toThrow(
+      '--force and --keep-existing are mutually exclusive',
+    );
     expect(mockActionCheck).not.toHaveBeenCalled();
   });
 });
@@ -180,20 +191,13 @@ describe('runCheck — options forwarding', () => {
 });
 
 describe('runCheck — error handling', () => {
-  it('sets exitCode=1 when actionCheck throws', async () => {
+  it('propagates error when actionCheck throws', async () => {
     mockActionCheck.mockRejectedValue(new Error('check failed'));
-    await runCheck(CONFIG, [], '/cwd');
-    expect(process.exitCode).toBe(1);
+    await expect(runCheck(CONFIG, [], '/cwd')).rejects.toThrow('check failed');
   });
 
-  it('logs error message when actionCheck throws', async () => {
+  it('propagates error message when actionCheck throws', async () => {
     mockActionCheck.mockRejectedValue(new Error('something went wrong'));
-    const errors: string[] = [];
-    const spy = jest.spyOn(console, 'error').mockImplementation((...args) => {
-      errors.push(args.join(' '));
-    });
-    await runCheck(CONFIG, [], '/cwd');
-    spy.mockRestore();
-    expect(errors.some((e) => e.includes('something went wrong'))).toBe(true);
+    await expect(runCheck(CONFIG, [], '/cwd')).rejects.toThrow('something went wrong');
   });
 });

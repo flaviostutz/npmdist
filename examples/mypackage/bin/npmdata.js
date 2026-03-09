@@ -1,3 +1,3 @@
 #!/usr/bin/env node
 'use strict';
-require('npmdata').main(__dirname, process.argv.slice(2));
+require('npmdata').binpkg(__dirname, process.argv.slice(2));

@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "",
   "main": "dist/index.js",
-  "bin": "dist/main.js",
+  "bin": "dist/cli/bin.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist/**",

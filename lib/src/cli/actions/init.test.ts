@@ -108,20 +108,13 @@ describe('runInit — success output', () => {
 });
 
 describe('runInit — error handling', () => {
-  it('sets exitCode=1 when actionInit throws', async () => {
+  it('propagates error when actionInit throws', async () => {
     mockActionInit.mockRejectedValue(new Error('init failed'));
-    await runInit(null, [], '/cwd');
-    expect(process.exitCode).toBe(1);
+    await expect(runInit(null, [], '/cwd')).rejects.toThrow('init failed');
   });
 
-  it('logs error message when actionInit throws', async () => {
+  it('propagates error message when actionInit throws', async () => {
     mockActionInit.mockRejectedValue(new Error('target already has package.json'));
-    const errors: string[] = [];
-    const spy = jest.spyOn(console, 'error').mockImplementation((...args) => {
-      errors.push(args.join(' '));
-    });
-    await runInit(null, [], '/cwd');
-    spy.mockRestore();
-    expect(errors.some((e) => e.includes('target already has package.json'))).toBe(true);
+    await expect(runInit(null, [], '/cwd')).rejects.toThrow('target already has package.json');
   });
 });

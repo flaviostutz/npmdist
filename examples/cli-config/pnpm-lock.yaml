@@ -205,7 +205,7 @@ packages:
     engines: {node: '>=0.10.0'}
 
   example-files-package@file:../mypackage/dist/example-files-package-1.0.0.tgz:
-    resolution: {integrity: sha512-K9PfQHFKPr7Q73vNXxQgFRYi4Q2Lqk/MWGjs6fY3saaXByLHOjvPaNqHN+8fhRc4kxKch7idBLdQpLO244zcUA==, tarball: file:../mypackage/dist/example-files-package-1.0.0.tgz}
+    resolution: {integrity: sha512-FXiKa5fS/cZFJ6Dbe0z0HZbea+4HWQtwKWFSqKSZSLgUzWWXtTw9RRVUHJx8MHQfqSt6QAXUBAv0GaqLMtR6KQ==, tarball: file:../mypackage/dist/example-files-package-1.0.0.tgz}
     version: 1.0.0
     hasBin: true
 
@@ -352,12 +352,12 @@ packages:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
 
   npmdata@file:../../lib/dist/npmdata-0.0.1.tgz:
-    resolution: {integrity: sha512-MqFZNRhV6cEU/4vdAhz0+B2MzBoJQX3n7KYm3F1vteWNTY8T4nv3BebDnrbx9nQCD1rmtLEn13+YuetoMEHbVQ==, tarball: file:../../lib/dist/npmdata-0.0.1.tgz}
+    resolution: {integrity: sha512-XVUi+2hxf49WllzDDMnX1VdSM6SO6VXPgRlzlCEhOjPOxGU5zs+v7peQt1APBKc8SqW2DneeQ+63q6sZlH3dDg==, tarball: file:../../lib/dist/npmdata-0.0.1.tgz}
     version: 0.0.1
     hasBin: true
 
   npmdata@file:../lib/dist/npmdata-0.0.1.tgz:
-    resolution: {integrity: sha512-MqFZNRhV6cEU/4vdAhz0+B2MzBoJQX3n7KYm3F1vteWNTY8T4nv3BebDnrbx9nQCD1rmtLEn13+YuetoMEHbVQ==, tarball: file:../lib/dist/npmdata-0.0.1.tgz}
+    resolution: {integrity: sha512-XVUi+2hxf49WllzDDMnX1VdSM6SO6VXPgRlzlCEhOjPOxGU5zs+v7peQt1APBKc8SqW2DneeQ+63q6sZlH3dDg==, tarball: file:../lib/dist/npmdata-0.0.1.tgz}
     version: 0.0.1
     hasBin: true
 

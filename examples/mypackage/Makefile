@@ -20,6 +20,8 @@ clean:
 	@rm -rf bin
 	@rm package.json
 	@cp package.json.orig package.json
+	make clean -C ../mypackage-consumer
+	make clean -C ../cli-config
 
 test:
 	echo "Running integration tests..."
