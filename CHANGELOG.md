@@ -4,6 +4,34 @@
 
 ### Features
 
+* complete refactoring to hierarchical dependency extraction [[5cd8549](https://github.com/flaviostutz/npmdata/commit/5cd85495dcb130a924933a747afa64f7663fa6a1)]
+* post script support [[97861ca](https://github.com/flaviostutz/npmdata/commit/97861ca86e692d6d58057a46a3b9283d2f71b9fb)]
+* release extract from config [[4785cfe](https://github.com/flaviostutz/npmdata/commit/4785cfee6e205d9ffcb6e15b68f446d1410440f0)]
+* rename tags to presets [[dd51bd8](https://github.com/flaviostutz/npmdata/commit/dd51bd82a98d2bc24bc79dd871fa109ea7f6258e)]
+* reorganize npmdata config structure [[06aaea6](https://github.com/flaviostutz/npmdata/commit/06aaea6ff6676feb8400e53fb2425c7470a8f5a8)]
+* v2 implementation [[87f8306](https://github.com/flaviostutz/npmdata/commit/87f83069ebb583bf5282dfe2b59fa803ee240e0c)]
+
+### Maintenance
+
+* release: 0.11.0 [[a79fb0b](https://github.com/flaviostutz/npmdata/commit/a79fb0bef97bfecc4e993c378c23b171504561a6)]
+* release: 0.12.0-beta.0 [[14cb03b](https://github.com/flaviostutz/npmdata/commit/14cb03b767dde0e2eb8194d4b6ec815d77326285)]
+* enhance readme [[cf4d853](https://github.com/flaviostutz/npmdata/commit/cf4d8538c6cb033fd970d2500f8d135386ba7a62)]
+* preparing spec and plan for implementation [[f8cdb14](https://github.com/flaviostutz/npmdata/commit/f8cdb1460de95c2ccf53f52dad61e02735703685)]
+* refactoring of the codebase [[d02eccd](https://github.com/flaviostutz/npmdata/commit/d02eccd5294874ed8497947f3a60d589da9480d2)]
+* spec draft for refactoring [[e0d0615](https://github.com/flaviostutz/npmdata/commit/e0d0615802f3879c0248f421d6738941cca83ebf)]
+
+### Misc
+
+
+### Info
+
+* Authors: Flavio Stutz <flaviostutz@gmail.com>
+
+
+## 0.12.0 (2026-03-06)
+
+### Features
+
 * post script support [[97861ca](https://github.com/flaviostutz/npmdata/commit/97861ca86e692d6d58057a46a3b9283d2f71b9fb)]
 * release extract from config [[4785cfe](https://github.com/flaviostutz/npmdata/commit/4785cfee6e205d9ffcb6e15b68f446d1410440f0)]
 * rename tags to presets [[dd51bd8](https://github.com/flaviostutz/npmdata/commit/dd51bd82a98d2bc24bc79dd871fa109ea7f6258e)]
