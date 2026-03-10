@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.13.3 (2026-03-09)
+
+### Maintenance
+
+* release: 0.13.2 [[5d1055e](https://github.com/flaviostutz/npmdata/commit/5d1055e7aabae29e9cb4517ce8d419dd57b0f89a)]
+* fix errors when running in non nodejs projects contexts [[ab80c55](https://github.com/flaviostutz/npmdata/commit/ab80c550ced827d3af4fd5f7161ce65aba6d3510)]
+* gitignore pnpm locks [[7ac9924](https://github.com/flaviostutz/npmdata/commit/7ac992437d08428af8311889cd1982418b926e16)]
+
+### Misc
+
+
+### Info
+
+* Authors: Flavio Stutz <flaviostutz@gmail.com>
+
+
 ## 0.13.2 (2026-03-09)
 
 ### Maintenance
