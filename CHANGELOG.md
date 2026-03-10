@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.14.1 (2026-03-10)
+
+### Maintenance
+
+* release: 0.14.0 [[2c660e2](https://github.com/flaviostutz/npmdata/commit/2c660e23ff80ee45aff16c58f9b1a9f7fa8c491e)]
+* removing thrown error logs on normal operation [[e9f1b19](https://github.com/flaviostutz/npmdata/commit/e9f1b19944f49987894f6a98e37d5d102d05d48a)]
+
+### Misc
+
+
+### Info
+
+* Authors: Flavio Stutz <flaviostutz@gmail.com>
+
+
 ## 0.14.0 (2026-03-10)
 
 ### Features
