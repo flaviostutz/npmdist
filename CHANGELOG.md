@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.15.0 (2026-03-11)
+
+### Features
+
+* adding selector.exclude config [[a86a059](https://github.com/flaviostutz/npmdata/commit/a86a0591ef10d1bbd05492266f7fd86441a7fea1)]
+
+### Maintenance
+
+* release: 0.14.2 [[3f8fe68](https://github.com/flaviostutz/npmdata/commit/3f8fe6803516fb9ff773d88fcb020b67f46a5b64)]
+
+### Misc
+
+
+### Info
+
+* Authors: Flavio Stutz <flaviostutz@gmail.com>
+
+
 ## 0.14.2 (2026-03-10)
 
 ### Maintenance
