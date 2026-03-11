@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.15.1 (2026-03-11)
+
+### Maintenance
+
+* release: 0.15.0 [[ea46385](https://github.com/flaviostutz/npmdata/commit/ea463856c51bf9225cc15c95f55d7f599e5c7c40)]
+* default exclude is appended to passed exclude [[eda55e9](https://github.com/flaviostutz/npmdata/commit/eda55e979d5571ddbb39c44680e10d73703726dd)]
+* run install after init [[00591f6](https://github.com/flaviostutz/npmdata/commit/00591f6e35c84c8c9df25c534e0391d7a50987fd)]
+
+### Misc
+
+
+### Info
+
+* Authors: Flavio Stutz <flaviostutz@gmail.com>
+
+
 ## 0.15.0 (2026-03-11)
 
 ### Features
