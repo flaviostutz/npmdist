@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 /* eslint-disable unicorn/no-null */
 
-import childProcess from 'node:child_process';
-
 import { actionExtract } from '../../package/action-extract';
 import { NpmdataConfig, ProgressEvent } from '../../types';
 import { printUsage } from '../usage';
@@ -10,10 +8,23 @@ import { printUsage } from '../usage';
 import { runExtract } from './extract';
 
 jest.mock('../usage', () => ({ printUsage: jest.fn() }));
-jest.mock('node:child_process', () => ({ execSync: jest.fn() }));
+jest.mock('node:child_process', () => ({
+  ...jest.requireActual('node:child_process'),
+  spawnSync: jest.fn().mockReturnValue({
+    status: 0,
+    stdout: Buffer.from(''),
+    stderr: Buffer.from(''),
+    // eslint-disable-next-line no-undefined
+    error: undefined,
+  }),
+}));
+
+// eslint-disable-next-line import/no-commonjs, @typescript-eslint/no-require-imports
+const { spawnSync: mockSpawnSync } = require('node:child_process') as {
+  spawnSync: jest.MockedFunction<typeof import('node:child_process').spawnSync>;
+};
 
 const mockPrintUsage = printUsage as jest.MockedFunction<typeof printUsage>;
-const mockExecSync = childProcess.execSync as jest.MockedFunction<typeof childProcess.execSync>;
 
 jest.mock('../../package/action-extract', () => ({
   actionExtract: jest.fn(),
@@ -36,6 +47,16 @@ beforeEach(() => {
   jest.clearAllMocks();
   delete process.exitCode;
   mockActionExtract.mockResolvedValue(DEFAULT_RESULT);
+  mockSpawnSync.mockReturnValue({
+    pid: 0,
+    output: [],
+    // eslint-disable-next-line no-undefined
+    error: undefined,
+    status: 0,
+    signal: null,
+    stdout: Buffer.from(''),
+    stderr: Buffer.from(''),
+  });
 });
 
 afterEach(() => {
@@ -305,54 +326,69 @@ describe('runExtract — postExtractScript', () => {
 
   it('runs postExtractScript after successful non-dry-run extract', async () => {
     await runExtract(configWithScript, [], '/cwd');
-    expect(mockExecSync).toHaveBeenCalledWith('echo done', {
+    expect(mockSpawnSync).toHaveBeenCalledWith('echo done', [], {
       cwd: '/cwd',
-      stdio: 'inherit',
+      shell: true,
+      stdio: 'pipe',
       encoding: 'utf8',
     });
   });
 
   it('appends argv to the postExtractScript command', async () => {
     await runExtract(configWithScript, ['--silent'], '/cwd');
-    expect(mockExecSync).toHaveBeenCalledWith(
+    expect(mockSpawnSync).toHaveBeenCalledWith(
       expect.stringContaining('--silent'),
+      [],
       expect.any(Object),
     );
   });
 
   it('does not run postExtractScript when --dry-run', async () => {
     await runExtract(configWithScript, ['--dry-run'], '/cwd');
-    expect(mockExecSync).not.toHaveBeenCalled();
+    expect(mockSpawnSync).not.toHaveBeenCalled();
   });
 
   it('does not run postExtractScript when config has no script', async () => {
     await runExtract(CONFIG_WITH_SETS, [], '/cwd');
-    expect(mockExecSync).not.toHaveBeenCalled();
+    expect(mockSpawnSync).not.toHaveBeenCalled();
   });
 
-  it('throws with script exit code in message on script failure', async () => {
-    mockExecSync.mockImplementation(() => {
-      const err = new Error('script failed') as Error & { status: number };
-      err.status = 42;
-      throw err;
+  it('throws the OS error when spawnSync returns an error object', async () => {
+    mockSpawnSync.mockReturnValue({
+      pid: 0,
+      output: [],
+      stdout: Buffer.from(''),
+      stderr: Buffer.from(''),
+      status: null,
+      signal: null,
+      error: new Error('spawn ENOENT'),
     });
-    await expect(runExtract(configWithScript, [], '/cwd')).rejects.toThrow(
-      'Post-extract script failed with exit code 42',
-    );
+    await expect(runExtract(configWithScript, [], '/cwd')).rejects.toThrow('spawn ENOENT');
   });
 
-  it('throws with exit code 1 when script fails with no status code', async () => {
-    mockExecSync.mockImplementation(() => {
-      throw new Error('script crashed');
+  it('does not throw when spawnSync exits with non-zero status but no OS error', async () => {
+    mockSpawnSync.mockReturnValue({
+      pid: 0,
+      output: [],
+      stdout: Buffer.from(''),
+      stderr: Buffer.from(''),
+      status: 1,
+      signal: null,
+      // eslint-disable-next-line no-undefined
+      error: undefined,
     });
-    await expect(runExtract(configWithScript, [], '/cwd')).rejects.toThrow(
-      'Post-extract script failed with exit code 1',
-    );
+    await expect(runExtract(configWithScript, [], '/cwd')).resolves.toBeUndefined();
   });
 
   it('does not print summary after script failure', async () => {
-    mockExecSync.mockImplementation(() => {
-      throw Object.assign(new Error('fail'), { status: 2 });
+    mockSpawnSync.mockReturnValue({
+      pid: 0,
+      output: [],
+      stdout: Buffer.from(''),
+      stderr: Buffer.from(''),
+      status: null,
+      signal: null,
+      error: new Error('fail'),
     });
     const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
     await expect(runExtract(configWithScript, [], '/cwd')).rejects.toThrow();

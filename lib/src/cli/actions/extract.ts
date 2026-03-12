@@ -1,11 +1,10 @@
 /* eslint-disable no-console */
-import { execSync } from 'node:child_process';
 
 import { NpmdataConfig, ProgressEvent } from '../../types';
 import { parseArgv, buildEntriesFromArgv, applyArgvOverrides } from '../argv';
 import { printUsage } from '../usage';
 import { actionExtract } from '../../package/action-extract';
-import { filterEntriesByPresets } from '../../utils';
+import { filterEntriesByPresets, spawnWithLog } from '../../utils';
 
 /**
  * `extract` CLI action handler.
@@ -63,11 +62,12 @@ export async function runExtract(
   const isDryRun = filtered.some((e) => e.output?.dryRun);
   if (!isDryRun && config?.postExtractScript) {
     const scriptCmd = `${config.postExtractScript} ${argv.join(' ')}`.trim();
-    try {
-      execSync(scriptCmd, { cwd, stdio: 'inherit', encoding: 'utf8' });
-    } catch (error: unknown) {
-      const e = error as { status?: number };
-      throw new Error(`Post-extract script failed with exit code ${e.status ?? 1}`);
+    if (parsed.verbose) {
+      console.log(`[verbose] Running post-extract script: ${scriptCmd}`);
+    }
+    spawnWithLog(scriptCmd, [], cwd, parsed.verbose, true);
+    if (parsed.verbose) {
+      console.log(`[verbose] Post-extract script completed successfully.`);
     }
   }
 

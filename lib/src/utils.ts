@@ -1,8 +1,9 @@
+/* eslint-disable no-console */
 /* eslint-disable no-undefined */
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { execSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 
 import semver from 'semver';
 import { detect } from 'package-manager-detector/detect';
@@ -100,21 +101,25 @@ async function runPackageManagerCommand(
   spec: string,
   commandType: 'add' | 'upgrade',
   workDir: string,
+  verbose?: boolean,
 ): Promise<void> {
+  if (verbose) {
+    console.log(
+      `[verbose] Running package manager command for spec "${spec}" with type "${commandType}" in directory "${workDir}"`,
+    );
+  }
   const detected = await detect({ cwd: workDir });
   const agent = detected?.agent ?? 'npm';
 
+  if (verbose) {
+    console.log(`[verbose] Detected package manager: ${agent}`);
+  }
   const resolved = resolveCommand(agent, commandType, [spec]);
   if (!resolved) {
     throw new Error(`Could not resolve "${commandType}" command for package manager "${agent}"`);
   }
 
-  const cmd = `${resolved.command} ${resolved.args.join(' ')}`;
-  try {
-    execSync(cmd, { cwd: workDir, stdio: 'pipe', encoding: 'utf8' });
-  } catch (error: unknown) {
-    throw new Error(`Failed to run ${spec}: ${error}`);
-  }
+  spawnWithLog(resolved.command, resolved.args, workDir, verbose, true);
 }
 
 /**
@@ -130,7 +135,7 @@ export async function installOrUpgradePackage(
   verbose?: boolean,
 ): Promise<string> {
   const workDir = cwd ?? process.cwd();
-  const spec = version ? `${name}@${version}` : `${name}`;
+  const spec = version ? `${name}@${version}` : `${name}@latest`;
 
   // Check if already installed with a satisfying version (skip install if not upgrading)
   if (!upgrade) {
@@ -221,7 +226,6 @@ export function filterEntriesByPresets(
 export function initTempPackageJson(workDir: string, verbose?: boolean): void {
   const pkgJsonPath = path.join(workDir, 'package.json');
   if (verbose) {
-    // eslint-disable-next-line no-console
     console.log(
       `[verbose] extract: creating temporary package.json at ${pkgJsonPath} for this extraction`,
     );
@@ -259,7 +263,6 @@ export function cleanupTempPackageJson(cwd: string, verbose?: boolean): void {
     return;
 
   if (verbose) {
-    // eslint-disable-next-line no-console
     console.log(
       `[verbose] extract: removing temporary package.json and node_modules at ${tempPkgJsonPath} created for this extraction`,
     );
@@ -277,7 +280,48 @@ export function cleanupTempPackageJson(cwd: string, verbose?: boolean): void {
     const existing = fs.readFileSync(gitignorePath, 'utf8');
     const lines = existing.split('\n').map((l) => l.trim());
     if (lines.length === 1 && lines[0] === 'node_modules') {
+      if (verbose) {
+        console.log(`[verbose] Removing .gitignore entries`);
+      }
       fs.unlinkSync(gitignorePath);
     }
   }
+}
+
+export function spawnWithLog(
+  command: string,
+  args: string[],
+  workDir: string,
+  verbose: boolean | undefined,
+  failOnError: boolean,
+): ReturnType<typeof spawnSync> {
+  if (verbose) {
+    console.log(`[verbose] Running command: ${command} ${args.join(' ')} in ${workDir}`);
+  }
+  const result = spawnSync(command, args, {
+    cwd: workDir,
+    shell: true,
+    stdio: 'pipe',
+    encoding: 'utf8',
+  });
+
+  if (verbose) {
+    if (result.stdout.toString().trim().length > 0) {
+      console.log(result.stdout.toString());
+    }
+    if (result.stderr.toString().trim().length > 0) {
+      console.error(result.stderr.toString());
+    }
+  }
+
+  if (result.error) {
+    if (verbose) {
+      console.error(`[verbose] Error: ${result.error.message}`);
+    }
+    if (failOnError) {
+      throw result.error;
+    }
+  }
+
+  return result;
 }

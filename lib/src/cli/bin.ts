@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { cli } from './cli';
+import { cli, setupUncaughtExceptionHandler } from './cli';
 
-// setupUncaughtExceptionHandler();
+setupUncaughtExceptionHandler();
 
 void (async (): Promise<void> => {
   const exitCode = await cli(['node', 'npmdata', ...process.argv.slice(2)], process.cwd());
