@@ -150,4 +150,29 @@ describe('diff', () => {
     expect(result.toSkip).toHaveLength(1);
     expect(result.toModify).toHaveLength(0);
   });
+
+  it('unmanaged set does not delete marker entries outside its selection', async () => {
+    // Simulates the split-set pattern: Set 1 (managed) extracted file-a.md and
+    // file-b.md for the package; Set 2 (unmanaged) runs for the same package
+    // and output but only selects file-b.md. Set 2 must NOT schedule file-a.md
+    // for deletion even though it is in the existing marker.
+    writeFile(pkgDir, 'file-b.md', 'b content');
+    writeFile(outputDir, 'file-a.md', 'a content');
+    writeFile(outputDir, 'file-b.md', 'b content');
+    const marker: ManagedFileMetadata[] = [
+      { path: 'file-a.md', packageName: 'my-pkg', packageVersion: '1.0.0' },
+      { path: 'file-b.md', packageName: 'my-pkg', packageVersion: '1.0.0' },
+    ];
+    const result = await diff(
+      pkgDir,
+      outputDir,
+      { files: ['file-b.md'] },
+      { path: '.', unmanaged: true },
+      marker,
+      [],
+    );
+    expect(result.toDelete).toHaveLength(0);
+    expect(result.toSkip).toHaveLength(1); // file-b.md skipped (unmanaged, exists)
+    expect(result.toAdd).toHaveLength(0);
+  });
 });

@@ -18,7 +18,7 @@ lint:
 # 	pnpm audit --audit-level high
 
 lint-fix:
-	pnpm exec eslint . --ext .ts --fix
+	pnpm exec eslint ./src --ext .ts --fix
 
 test-watch:
 	pnpm exec jest --watch

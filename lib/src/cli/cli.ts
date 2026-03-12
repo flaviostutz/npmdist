@@ -1,5 +1,7 @@
 /* eslint-disable no-console */
-import { loadNpmdataConfig } from '../package/config';
+import path from 'node:path';
+
+import { loadNpmdataConfig, loadNpmdataConfigFile } from '../package/config';
 
 import { printUsage, printVersion } from './usage';
 import { runExtract } from './actions/extract';
@@ -51,10 +53,23 @@ export async function cli(argv: string[], cwd?: string, configCwd?: string): Pro
   // Load config from cwd, unless --packages is specified (CLI-only mode)
   const effectiveCwd = cwd ?? process.cwd();
   const effectiveConfigCwd = configCwd ?? effectiveCwd;
-  const config =
-    action !== 'presets' && cmdArgs.includes('--packages')
-      ? null // eslint-disable-line unicorn/no-null
-      : await loadNpmdataConfig(effectiveConfigCwd);
+
+  // Detect --config from full args (works regardless of position relative to command)
+  const configFlagIdx = args.indexOf('--config');
+  const configFilePath =
+    configFlagIdx !== -1 && configFlagIdx + 1 < args.length
+      ? args[configFlagIdx + 1]
+      : // eslint-disable-next-line no-undefined
+        undefined;
+
+  let config: Awaited<ReturnType<typeof loadNpmdataConfig>>;
+  if (configFilePath) {
+    config = await loadNpmdataConfigFile(path.resolve(effectiveCwd, configFilePath));
+  } else if (action !== 'presets' && cmdArgs.includes('--packages')) {
+    config = null; // eslint-disable-line unicorn/no-null
+  } else {
+    config = await loadNpmdataConfig(effectiveConfigCwd);
+  }
 
   try {
     await dispatch(action, config, cmdArgs, effectiveCwd);

@@ -41,6 +41,7 @@ A single authoritative reference ensures consistent implementation decisions acr
   /mypackage              Self-exportable data package example
   /mypackage-consumer     Consumer of the self-exportable package
   /cli-config             CLI usage with .npmdatarc configuration
+  /split-set-config       Split-set pattern: same package in two sets, excluding a file in one and including it with different output config in the other, using .npmdatarc
 ```
 
 **Coding standards**

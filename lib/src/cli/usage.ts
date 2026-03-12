@@ -27,6 +27,7 @@ Options:
   --dry-run               Report changes without writing to disk.
   --upgrade               Force fresh package install even if satisfying version installed.
   --presets <tags>        Comma-separated preset tags; only matching entries are processed.
+  --config <file>         Path to a config file (overrides auto-discovered .npmdatarc / package.json).
   --silent                Suppress per-file output; print only final summary line.
   --verbose, -v           Print detailed step information.
   --help                  Print this help text.
@@ -49,6 +50,7 @@ Options:
   --content-regex <re>    Regex strings for content filtering.
   --unmanaged             Silently skip unmanaged entries.
   --presets <tags>        Comma-separated preset tags; only matching entries are checked.
+  --config <file>         Path to a config file (overrides auto-discovered .npmdatarc / package.json).
   --verbose, -v           Print detailed comparison information.
   --help                  Print this help text.
 
@@ -64,6 +66,7 @@ Print all files currently managed by npmdata in the output directory.
 
 Options:
   --output, -o <dir>      Output directory to inspect.
+  --config <file>         Path to a config file (overrides auto-discovered .npmdatarc / package.json).
   --verbose, -v           Print additional metadata per file.
   --help                  Print this help text.
 
@@ -83,6 +86,7 @@ Options:
   --output, -o <dir>      Output directory to purge.
   --presets <tags>        Comma-separated preset tags; only matching entries are purged.
   --dry-run               Print what would be removed without deleting.
+  --config <file>         Path to a config file (overrides auto-discovered .npmdatarc / package.json).
   --silent                Suppress per-file output.
   --verbose, -v           Print detailed deletion steps.
   --help                  Print this help text.
@@ -116,6 +120,7 @@ Presets are declared in each entry's "presets" field and can be used
 to selectively run extract, check, list, or purge via --presets <tag>.
 
 Options:
+  --config <file>         Path to a config file (overrides auto-discovered .npmdatarc / package.json).
   --help                  Print this help text.
 
 Output format: one preset per line, sorted alphabetically

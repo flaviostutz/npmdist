@@ -233,4 +233,66 @@ describe('cli', () => {
     expect(lines).toContain('staging');
     expect(lines).toEqual(['dev', 'prod', 'staging']); // sorted
   }, 60_000);
+
+  it('--config loads configuration from an explicit file path', async () => {
+    const outputDir = path.join(tmpDir, 'output-custom-cfg');
+    const configFile = path.join(tmpDir, 'my-npmdata.json');
+
+    fs.writeFileSync(
+      configFile,
+      JSON.stringify({
+        sets: [{ package: PKG_NAME, output: { path: outputDir, gitignore: false } }],
+      }),
+    );
+
+    // No .npmdatarc in tmpDir — config comes only from --config
+    await cli(['node', 'npmdata', 'extract', '--config', configFile], tmpDir);
+
+    expect(fs.existsSync(path.join(outputDir, 'docs/guide.md'))).toBe(true);
+    expect(fs.existsSync(path.join(outputDir, 'docs/api.md'))).toBe(true);
+  }, 60_000);
+
+  it('--config overrides auto-discovered config when both exist', async () => {
+    const outputDefault = path.join(tmpDir, 'output-default');
+    const outputCustom = path.join(tmpDir, 'output-custom');
+    const configFile = path.join(tmpDir, 'custom.json');
+
+    // Write an auto-discovered config that points to outputDefault
+    fs.writeFileSync(
+      path.join(tmpDir, '.npmdatarc.json'),
+      JSON.stringify({
+        sets: [{ package: PKG_NAME, output: { path: outputDefault, gitignore: false } }],
+      }),
+    );
+
+    // Write the custom config that points to outputCustom
+    fs.writeFileSync(
+      configFile,
+      JSON.stringify({
+        sets: [{ package: PKG_NAME, output: { path: outputCustom, gitignore: false } }],
+      }),
+    );
+
+    await cli(['node', 'npmdata', 'extract', '--config', configFile], tmpDir);
+
+    // Only outputCustom should be populated
+    expect(fs.existsSync(path.join(outputCustom, 'docs/guide.md'))).toBe(true);
+    expect(fs.existsSync(path.join(outputDefault, 'docs/guide.md'))).toBe(false);
+  }, 60_000);
+
+  it('--config works with relative file path', async () => {
+    const outputDir = path.join(tmpDir, 'output-relative');
+    const configFile = path.join(tmpDir, 'relative-cfg.json');
+
+    fs.writeFileSync(
+      configFile,
+      JSON.stringify({
+        sets: [{ package: PKG_NAME, output: { path: outputDir, gitignore: false } }],
+      }),
+    );
+
+    await cli(['node', 'npmdata', 'extract', '--config', 'relative-cfg.json'], tmpDir);
+
+    expect(fs.existsSync(path.join(outputDir, 'docs/guide.md'))).toBe(true);
+  }, 60_000);
 });

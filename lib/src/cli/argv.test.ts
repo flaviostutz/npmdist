@@ -69,6 +69,14 @@ describe('parseArgv', () => {
     expect(parseArgv(['-v']).verbose).toBe(true);
   });
 
+  it('parses --config flag', () => {
+    expect(parseArgv(['--config', 'my-config.json']).configFile).toBe('my-config.json');
+    expect(parseArgv(['--config', '/absolute/path/config.json']).configFile).toBe(
+      '/absolute/path/config.json',
+    );
+    expect(parseArgv([]).configFile).toBeUndefined();
+  });
+
   it('returns all false when no flags set', () => {
     const parsed = parseArgv([]);
     expect(parsed.force).toBe(false);

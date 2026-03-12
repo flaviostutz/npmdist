@@ -112,10 +112,14 @@ export async function diff(
     }
   }
 
-  // Find managed files that are no longer in the filtered package source
-  for (const managed of existingMarker) {
-    if (!pkgFileSet.has(managed.path)) {
-      result.toDelete.push(managed.path);
+  // Find managed files that are no longer in the filtered package source.
+  // Skip for unmanaged sets: they must not delete files managed by other sets
+  // (unmanaged sets only add missing files and never take ownership of the marker).
+  if (!outputConfig.unmanaged) {
+    for (const managed of existingMarker) {
+      if (!pkgFileSet.has(managed.path)) {
+        result.toDelete.push(managed.path);
+      }
     }
   }
 

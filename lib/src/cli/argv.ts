@@ -10,6 +10,7 @@ export type ParsedArgv = {
   files?: string[];
   contentRegexes?: string[];
   presets?: string[];
+  configFile?: string;
   force: boolean;
   keepExisting: boolean;
   noGitignore: boolean;
@@ -64,6 +65,7 @@ export function parseArgv(argv: string[]): ParsedArgv {
     files: getCommaSplit('--files'),
     contentRegexes: getCommaSplit('--content-regex'),
     presets: getCommaSplit('--presets'),
+    configFile: getValue('--config'),
     force,
     keepExisting,
     noGitignore: getFlag('--no-gitignore'),

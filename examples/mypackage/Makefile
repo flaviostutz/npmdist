@@ -24,6 +24,7 @@ clean:
 	@cp package.json.orig package.json
 	make clean -C ../mypackage-consumer
 	make clean -C ../cli-config
+	make clean -C ../split-set-config
 
 test:
 	echo "Running integration tests..."
@@ -34,6 +35,7 @@ test:
 
 	cd ../mypackage-consumer && make test
 	cd ../cli-config && make test
+	cd ../split-set-config && make test
 
 install:
 	# replace the dependency with the local package

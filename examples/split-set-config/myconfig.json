@@ -1,0 +1,34 @@
+{
+  "sets": [
+    {
+      "package": "example-files-package",
+      "selector": {
+        "files": [
+          ".configs/**",
+          "docs/**"
+        ],
+        "exclude": [
+          ".configs/database.config.json"
+        ]
+      },
+      "output": {
+        "path": "output",
+        "gitignore": true
+      }
+    },
+    {
+      "package": "example-files-package",
+      "selector": {
+        "files": [
+          ".configs/database.config.json"
+        ]
+      },
+      "output": {
+        "path": "output",
+        "gitignore": false,
+        "unmanaged": true,
+        "keepExisting": true
+      }
+    }
+  ]
+}
