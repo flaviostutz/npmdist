@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.15.4 (2026-03-12)
+
+### Maintenance
+
+* release: 0.15.3 [[ace6884](https://github.com/flaviostutz/npmdata/commit/ace68841c2e41cc864124c9871c209cdfafc8cd1)]
+* fix bugs in spawn [[09fbce5](https://github.com/flaviostutz/npmdata/commit/09fbce58d21730d4c02669d0622cbea4be60d1cc)]
+
+### Misc
+
+
+### Info
+
+* Authors: Flavio Stutz <flaviostutz@gmail.com>
+
+
 ## 0.15.3 (2026-03-11)
 
 ### Maintenance
