@@ -3,13 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {
-  NpmdataConfig,
-  NpmdataExtractEntry,
-  ProgressEvent,
-  SelectorConfig,
-  OutputConfig,
-} from '../types';
+import { NpmdataExtractEntry, ProgressEvent, SelectorConfig, OutputConfig } from '../types';
 import {
   parsePackageSpec,
   installOrUpgradePackage,
@@ -25,7 +19,6 @@ import { createSymlinks, removeStaleSymlinks } from './symlinks';
 
 export type ExtractOptions = {
   entries: NpmdataExtractEntry[];
-  config: NpmdataConfig | null;
   cwd: string;
   verbose?: boolean;
   onProgress?: (event: ProgressEvent) => void;
@@ -45,18 +38,11 @@ export type ExtractResult = {
  */
 // eslint-disable-next-line complexity
 export async function actionExtract(options: ExtractOptions): Promise<ExtractResult> {
-  const {
-    entries,
-    config,
-    cwd,
-    verbose,
-    onProgress,
-    visitedPackages = new Set<string>(),
-  } = options;
+  const { entries, cwd, verbose, onProgress, visitedPackages = new Set<string>() } = options;
 
   if (verbose) {
     console.log(
-      `[verbose] extract: processing ${entries.length} entr${entries.length === 1 ? 'y' : 'ies'} (cwd: ${cwd})`,
+      `[verbose] >>> EXTRACT - ${entries.reduce((acc, entry) => acc + entry.package + ', ', '').slice(0, -2)}`,
     );
   }
 
@@ -66,6 +52,11 @@ export async function actionExtract(options: ExtractOptions): Promise<ExtractRes
 
   try {
     for (const entry of entries) {
+      if (verbose) {
+        // eslint-disable-next-line no-undefined
+        console.log(`[verbose] config: ${JSON.stringify(entry, undefined, 2)}`);
+      }
+
       if (!entry.package) {
         throw new Error('Each set entry must have a "package" field.');
       }
@@ -255,7 +246,9 @@ export async function actionExtract(options: ExtractOptions): Promise<ExtractRes
           const visitedSet = new Set(visitedPackages);
           visitedSet.add(pkg.name);
 
-          // Inherit caller overrides (force, dryRun, keepExisting) from current entry
+          // Inherit caller overrides (force, dryRun, keepExisting, gitignore, unmanaged) from current entry.
+          // Caller-defined (non-undefined) values always take precedence; undefined propagates as-is
+          // so defaults are only resolved at the leaf execute() level, not during recursion.
           const inheritedEntries = filteredSets.map((depEntry) => {
             const { path: depPath, ...restOutput } = depEntry.output ?? {};
             const inheritedOutput = {
@@ -264,6 +257,8 @@ export async function actionExtract(options: ExtractOptions): Promise<ExtractRes
               force: outputConfig.force ?? restOutput.force,
               dryRun: outputConfig.dryRun ?? restOutput.dryRun,
               keepExisting: outputConfig.keepExisting ?? restOutput.keepExisting,
+              gitignore: outputConfig.gitignore ?? restOutput.gitignore,
+              unmanaged: outputConfig.unmanaged ?? restOutput.unmanaged,
               // Append symlinks and contentReplacements
               symlinks: [...(outputConfig.symlinks ?? []), ...(restOutput.symlinks ?? [])],
               contentReplacements: [
@@ -284,7 +279,6 @@ export async function actionExtract(options: ExtractOptions): Promise<ExtractRes
           }
           const subResult = await actionExtract({
             entries: inheritedEntries,
-            config,
             cwd,
             verbose,
             onProgress,

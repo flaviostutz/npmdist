@@ -252,7 +252,6 @@ describe('runExtract — summary output', () => {
     await runExtract(CONFIG_WITH_SETS, [], '/my/cwd');
     const callArg = mockActionExtract.mock.calls[0][0];
     expect(callArg.cwd).toBe('/my/cwd');
-    expect(callArg.config).toBe(CONFIG_WITH_SETS);
   });
 });
 

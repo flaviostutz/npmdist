@@ -1,4 +1,3 @@
-/* eslint-disable unicorn/no-null */
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -51,7 +50,7 @@ describe('actionExtract', () => {
     const outputDir = path.join(tmpDir, 'output');
     const result = await actionExtract({
       entries: [{ package: 'my-pkg', output: { path: outputDir, gitignore: false } }],
-      config: null,
+
       cwd: tmpDir,
     });
 
@@ -66,7 +65,7 @@ describe('actionExtract', () => {
     const outputDir = path.join(tmpDir, 'output');
     await actionExtract({
       entries: [{ package: 'marker-pkg', output: { path: outputDir, gitignore: false } }],
-      config: null,
+
       cwd: tmpDir,
     });
 
@@ -83,7 +82,7 @@ describe('actionExtract', () => {
       entries: [
         { package: 'dry-pkg', output: { path: outputDir, dryRun: true, gitignore: false } },
       ],
-      config: null,
+
       cwd: tmpDir,
     });
 
@@ -102,7 +101,7 @@ describe('actionExtract', () => {
       entries: [
         { package: 'force-pkg', output: { path: outputDir, force: true, gitignore: false } },
       ],
-      config: null,
+
       cwd: tmpDir,
     });
 
@@ -119,7 +118,7 @@ describe('actionExtract', () => {
     await expect(
       actionExtract({
         entries: [{ package: 'conflict-pkg', output: { path: outputDir, gitignore: false } }],
-        config: null,
+
         cwd: tmpDir,
       }),
     ).rejects.toThrow('Conflict');
@@ -136,7 +135,7 @@ describe('actionExtract', () => {
       entries: [
         { package: 'keep-pkg', output: { path: outputDir, keepExisting: true, gitignore: false } },
       ],
-      config: null,
+
       cwd: tmpDir,
     });
 
@@ -152,7 +151,7 @@ describe('actionExtract', () => {
         entries: [
           { package: 'circ-pkg', output: { path: path.join(tmpDir, 'output'), gitignore: false } },
         ],
-        config: null,
+
         cwd: tmpDir,
         visitedPackages: visited,
       }),
@@ -192,7 +191,7 @@ describe('actionExtract', () => {
           output: { path: outputDir, gitignore: false },
         },
       ],
-      config: null,
+
       cwd: tmpDir,
     });
 
@@ -223,7 +222,7 @@ describe('actionExtract', () => {
           output: { path: path.join(outputDir, 'data'), gitignore: false },
         },
       ],
-      config: null,
+
       cwd: tmpDir,
     });
 
@@ -275,7 +274,7 @@ describe('actionExtract', () => {
           output: { path: outputDir, gitignore: false },
         },
       ],
-      config: null,
+
       cwd: tmpDir,
     });
 
@@ -308,7 +307,7 @@ describe('actionExtract', () => {
             output: { path: outputDir, gitignore: false },
           },
         ],
-        config: null,
+
         cwd: tmpDir,
       }),
     ).rejects.toThrow('nonexistent');
@@ -320,7 +319,7 @@ describe('actionExtract', () => {
     const outputDir = path.join(tmpDir, 'output');
     await actionExtract({
       entries: [{ package: 'modify-pkg', output: { path: outputDir, gitignore: false } }],
-      config: null,
+
       cwd: tmpDir,
     });
 
@@ -337,7 +336,7 @@ describe('actionExtract', () => {
           output: { path: outputDir, force: true, gitignore: false },
         },
       ],
-      config: null,
+
       cwd: tmpDir,
       onProgress: (e) => events.push(e.type),
     });
@@ -363,7 +362,7 @@ describe('actionExtract', () => {
           },
         },
       ],
-      config: null,
+
       cwd: tmpDir,
     });
 
@@ -377,7 +376,7 @@ describe('actionExtract', () => {
     await expect(
       actionExtract({
         entries: [{ package: '', output: { path: 'out' } }],
-        config: null,
+
         cwd: tmpDir,
       }),
     ).rejects.toThrow('"package" field');
@@ -387,7 +386,7 @@ describe('actionExtract', () => {
     await installMockPackage('default-out-pkg', '1.0.0', { 'file.md': '# hi' }, tmpDir);
     const result = await actionExtract({
       entries: [{ package: 'default-out-pkg' }],
-      config: null,
+
       cwd: tmpDir,
     });
     expect(result.added).toBe(1);
@@ -397,7 +396,7 @@ describe('actionExtract', () => {
   it('returns zero counts for empty entries', async () => {
     const result = await actionExtract({
       entries: [],
-      config: null,
+
       cwd: tmpDir,
     });
 
@@ -423,7 +422,7 @@ describe('actionExtract', () => {
             output: { path: outputDir, unmanaged: true, gitignore: false },
           },
         ],
-        config: null,
+
         cwd: tmpDir,
       }),
     ).resolves.toBeDefined();
@@ -440,7 +439,7 @@ describe('actionExtract', () => {
 
     await actionExtract({
       entries: [{ package: 'events-pkg', output: { path: outputDir, gitignore: false } }],
-      config: null,
+
       cwd: tmpDir,
       onProgress: (e) => events.push(e.type),
     });
@@ -457,7 +456,7 @@ describe('actionExtract', () => {
     // First extraction
     await actionExtract({
       entries: [{ package: 'skip-pkg', output: { path: outputDir, gitignore: false } }],
-      config: null,
+
       cwd: tmpDir,
     });
 
@@ -465,7 +464,7 @@ describe('actionExtract', () => {
     // Second extraction without changes — file should be skipped
     await actionExtract({
       entries: [{ package: 'skip-pkg', output: { path: outputDir, gitignore: false } }],
-      config: null,
+
       cwd: tmpDir,
       onProgress: (e) => events.push(e.type),
     });
@@ -485,7 +484,7 @@ describe('actionExtract', () => {
         { package: 'multi-a', output: { path: outputA, gitignore: false } },
         { package: 'multi-b', output: { path: outputB, gitignore: false } },
       ],
-      config: null,
+
       cwd: tmpDir,
     });
 
@@ -512,7 +511,7 @@ describe('actionExtract', () => {
           },
         },
       ],
-      config: null,
+
       cwd: tmpDir,
     });
 
@@ -533,7 +532,7 @@ describe('actionExtract', () => {
     const outputDir = path.join(tmpDir, 'output');
     await actionExtract({
       entries: [{ package: 'delete-pkg', output: { path: outputDir, gitignore: false } }],
-      config: null,
+
       cwd: tmpDir,
     });
 
@@ -546,7 +545,7 @@ describe('actionExtract', () => {
     const events: string[] = [];
     const result = await actionExtract({
       entries: [{ package: 'delete-pkg', output: { path: outputDir, gitignore: false } }],
-      config: null,
+
       cwd: tmpDir,
       onProgress: (e) => events.push(e.type),
     });
@@ -577,7 +576,7 @@ describe('actionExtract', () => {
           },
         },
       ],
-      config: null,
+
       cwd: tmpDir,
     });
 
@@ -658,7 +657,7 @@ describe('actionExtract', () => {
           },
         },
       ],
-      config: null,
+
       cwd: tmpDir,
     });
 
@@ -695,7 +694,7 @@ describe('actionExtract', () => {
           { package: 'rollback-pkg', output: { path: outputDir, gitignore: false } },
           { package: 'bad-pkg', output: { path: outputDir, gitignore: false } },
         ],
-        config: null,
+
         cwd: tmpDir,
       }),
     ).rejects.toThrow('Conflict');
@@ -734,7 +733,7 @@ describe('actionExtract', () => {
           output: { path: outputDir, gitignore: false, dryRun: true },
         },
       ],
-      config: null,
+
       cwd: tmpDir,
     });
 
@@ -776,7 +775,7 @@ describe('actionExtract', () => {
           output: { path: outputDir, gitignore: false, keepExisting: true },
         },
       ],
-      config: null,
+
       cwd: tmpDir,
     });
 
@@ -821,11 +820,118 @@ describe('actionExtract', () => {
           output: { path: outputDir, gitignore: false },
         },
       ],
-      config: null,
+
       cwd: tmpDir,
     });
 
     expect(fs.readFileSync(path.join(outputDir, 'dep-out', 'dep.md'), 'utf8')).toBe('pkg content');
+  }, 90000);
+
+  it('parent unmanaged: true cascades to dep and dep files are writable', async () => {
+    await installMockPackage('unmngcasc-dep', '1.0.0', { 'dep.md': 'dep content' }, tmpDir);
+    await installMockPackage('unmngcasc-main', '1.0.0', { 'main.md': '# Main' }, tmpDir);
+
+    const mainPkgJsonPath = path.join(tmpDir, 'node_modules', 'unmngcasc-main', 'package.json');
+    const mainPkgJson = JSON.parse(fs.readFileSync(mainPkgJsonPath).toString()) as object;
+    fs.writeFileSync(
+      mainPkgJsonPath,
+      JSON.stringify({
+        ...mainPkgJson,
+        npmdata: {
+          sets: [{ package: 'unmngcasc-dep', output: { path: 'dep-out', gitignore: false } }],
+        },
+      }),
+    );
+
+    const outputDir = path.join(tmpDir, 'output');
+    await actionExtract({
+      entries: [
+        {
+          package: 'unmngcasc-main',
+          output: { path: outputDir, gitignore: false, unmanaged: true },
+        },
+      ],
+
+      cwd: tmpDir,
+    });
+
+    const depFile = path.join(outputDir, 'dep-out', 'dep.md');
+    expect(fs.existsSync(depFile)).toBe(true);
+    // parent unmanaged: true must cascade: dep files should not be made read-only
+    const { mode } = fs.statSync(depFile);
+    expect(mode & 0o200).toBeGreaterThan(0); // owner write bit must be set
+  }, 90000);
+
+  it('dep-level unmanaged: true preserved when parent does not set unmanaged', async () => {
+    await installMockPackage('unmngdep-pkg', '1.0.0', { 'dep.md': 'dep content' }, tmpDir);
+    await installMockPackage('unmngdep-main', '1.0.0', { 'main.md': '# Main' }, tmpDir);
+
+    const mainPkgJsonPath = path.join(tmpDir, 'node_modules', 'unmngdep-main', 'package.json');
+    const mainPkgJson = JSON.parse(fs.readFileSync(mainPkgJsonPath).toString()) as object;
+    fs.writeFileSync(
+      mainPkgJsonPath,
+      JSON.stringify({
+        ...mainPkgJson,
+        npmdata: {
+          sets: [
+            {
+              package: 'unmngdep-pkg',
+              // dep declares its own unmanaged: true; parent does not set unmanaged at all
+              output: { path: 'dep-out', gitignore: false, unmanaged: true },
+            },
+          ],
+        },
+      }),
+    );
+
+    const outputDir = path.join(tmpDir, 'output');
+    // parent leaves unmanaged undefined — dep's own value must survive via `undefined ?? true`
+    await actionExtract({
+      entries: [{ package: 'unmngdep-main', output: { path: outputDir, gitignore: false } }],
+
+      cwd: tmpDir,
+    });
+
+    const depFile = path.join(outputDir, 'dep-out', 'dep.md');
+    expect(fs.existsSync(depFile)).toBe(true);
+    const { mode } = fs.statSync(depFile);
+    expect(mode & 0o200).toBeGreaterThan(0); // dep's unmanaged: true must be preserved
+  }, 90000);
+
+  it('parent gitignore: false cascades to dep and suppresses .gitignore in dep output', async () => {
+    await installMockPackage('gitcasc-dep', '1.0.0', { 'dep.md': 'dep content' }, tmpDir);
+    await installMockPackage('gitcasc-main', '1.0.0', { 'main.md': '# Main' }, tmpDir);
+
+    const mainPkgJsonPath = path.join(tmpDir, 'node_modules', 'gitcasc-main', 'package.json');
+    const mainPkgJson = JSON.parse(fs.readFileSync(mainPkgJsonPath).toString()) as object;
+    fs.writeFileSync(
+      mainPkgJsonPath,
+      JSON.stringify({
+        ...mainPkgJson,
+        npmdata: {
+          sets: [
+            {
+              package: 'gitcasc-dep',
+              // dep does NOT set gitignore (defaults to creating .gitignore)
+              output: { path: 'dep-out' },
+            },
+          ],
+        },
+      }),
+    );
+
+    const outputDir = path.join(tmpDir, 'output');
+    await actionExtract({
+      entries: [
+        // parent explicitly disables gitignore — must cascade to dep
+        { package: 'gitcasc-main', output: { path: outputDir, gitignore: false } },
+      ],
+
+      cwd: tmpDir,
+    });
+
+    // dep output should NOT contain a .gitignore (parent gitignore: false cascaded)
+    expect(fs.existsSync(path.join(outputDir, 'dep-out', '.gitignore'))).toBe(false);
   }, 90000);
 
   it('symlinks from both parent and dep levels are all created', async () => {
@@ -873,7 +979,7 @@ describe('actionExtract', () => {
           },
         },
       ],
-      config: null,
+
       cwd: tmpDir,
     });
 
@@ -924,7 +1030,7 @@ describe('actionExtract', () => {
     const outputDir = path.join(tmpDir, 'output');
     await actionExtract({
       entries: [{ package: 'level1-pkg', output: { path: outputDir, gitignore: false } }],
-      config: null,
+
       cwd: tmpDir,
     });
 
@@ -950,7 +1056,7 @@ describe('actionExtract', () => {
     const outputDir = path.join(tmpDir, 'output');
     await actionExtract({
       entries: [{ package: 'license-pkg', output: { path: outputDir, gitignore: false } }],
-      config: null,
+
       cwd: tmpDir,
     });
 

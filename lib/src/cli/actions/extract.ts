@@ -47,7 +47,6 @@ export async function runExtract(
 
   const result = await actionExtract({
     entries: filtered,
-    config,
     cwd,
     verbose: parsed.verbose,
     onProgress: (event: ProgressEvent) => {
