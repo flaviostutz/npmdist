@@ -65,8 +65,6 @@ export async function cli(argv: string[], cwd?: string, configCwd?: string): Pro
   let config: Awaited<ReturnType<typeof loadNpmdataConfig>>;
   if (configFilePath) {
     config = await loadNpmdataConfigFile(path.resolve(effectiveCwd, configFilePath));
-  } else if (action !== 'presets' && cmdArgs.includes('--packages')) {
-    config = null; // eslint-disable-line unicorn/no-null
   } else {
     config = await loadNpmdataConfig(effectiveConfigCwd);
   }

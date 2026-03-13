@@ -1,4 +1,3 @@
-import fs from 'node:fs';
 import path from 'node:path';
 
 import { cli, setupUncaughtExceptionHandler } from './cli';
@@ -20,14 +19,7 @@ export async function binpkg(binDir: string, args: string[]): Promise<void> {
   }
 
   const pkgRootDir = path.join(binDir, '..');
-  const pkgJson = JSON.parse(fs.readFileSync(path.join(pkgRootDir, 'package.json')).toString()) as {
-    name: string;
-  };
-  const exitCode = await cli(
-    ['node', 'npmdata', ...args, '--packages', pkgJson.name],
-    process.cwd(),
-    pkgRootDir,
-  );
+  const exitCode = await cli(['node', 'npmdata', ...args], process.cwd(), pkgRootDir);
   // eslint-disable-next-line unicorn/no-process-exit
   process.exit(exitCode);
 }

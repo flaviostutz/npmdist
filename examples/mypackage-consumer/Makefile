@@ -11,6 +11,7 @@ build: install
 # 	pnpm exec example-files-package extract --files "docs/**/*,conf/**/*" --output output
 
 test: clean install
+	@echo ">>>> mypackage-consumer"
 	pnpm exec example-files-package extract --output output
 
 	# fail if a expected extracted file doesn't exist
