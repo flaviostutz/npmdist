@@ -41,6 +41,7 @@
           "files": [
             "docs/**",
             "data/**",
+            "conf/globals.js",
             ".configs/**"
           ]
         },

@@ -187,8 +187,8 @@ describe('runCheck — options forwarding', () => {
     expect(mockActionCheck.mock.calls[0][0].verbose).toBe(true);
   });
 
-  it('passes skipUnmanaged=true when --unmanaged flag given', async () => {
-    await runCheck(CONFIG, ['--unmanaged'], '/cwd');
+  it('passes skipUnmanaged=true when --managed=false flag given', async () => {
+    await runCheck(CONFIG, ['--managed=false'], '/cwd');
     expect(mockActionCheck.mock.calls[0][0].skipUnmanaged).toBe(true);
   });
 });

@@ -190,7 +190,7 @@ export type ExtractionMap = {
 
 /**
  * One row in a .npmdata CSV marker file.
- * CSV format (preserved from v1): path,packageName,packageVersion — one row per file, no header.
+ * Format: path|packageName|packageVersion — one row per file, no header.
  */
 export type ManagedFileMetadata = {
   /** Relative path from marker file directory. */

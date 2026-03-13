@@ -31,7 +31,7 @@ A developer wants to pull a curated set of files from a published npm package in
 4. **Given** an existing unmanaged file at the destination path, **When** `extract` is run without `--force`, **Then** the tool reports a conflict and aborts without writing any file.
 5. **Given** `--force` is passed, **When** an unmanaged file exists at the destination, **Then** the file is overwritten and the operation succeeds.
 6. **Given** `--keep-existing` is passed, **When** a destination file already exists on disk, **Then** that file is skipped (not overwritten) but missing files are still created.
-7. **Given** `--unmanaged` is passed, **When** the user runs `extract`, **Then** files are written without a `.npmdata` marker, without `.gitignore` updates, and without being made read-only; existing destination files are skipped.
+7. **Given** `--managed=false` is passed, **When** the user runs `extract`, **Then** files are written without a `.npmdata` marker, without `.gitignore` updates, and without being made read-only; existing destination files are skipped.
 
 ---
 
@@ -141,7 +141,7 @@ A developer wants to run a custom script automatically after every successful ex
 - What happens when a circular dependency exists between packages? → Tool detects the cycle and exits with an informative error.
 - What happens when the output directory does not exist? → Tool creates it (and any parent directories) before writing files.
 - What happens when `--force` and `--keep-existing` are both passed? → Tool exits with a validation error before performing any work.
-- What happens when `--force` and `--unmanaged` are both passed? → `--unmanaged` takes precedence; existing files are not overwritten.
+- What happens when `--force` and `--managed=false` are both passed? → `--managed=false` takes precedence; existing files are not overwritten.
 - What happens when a package has no npmdata config and is extracted as a leaf? → The tool extracts all files in the package matching the inherited selector config (defaulting to all files minus package metadata).
 - What happens when the same output path would be written by two different leaf packages without `--force`? → Tool reports a conflict listing both packages and aborts.
 - What happens when a `.npmdata` marker file is manually deleted? → On next `extract` the tool treats previously managed files as unmanaged and applies normal conflict rules.
@@ -203,8 +203,8 @@ A developer wants to run a custom script automatically after every successful ex
 
 - **FR-040**: The tool MUST support the following CLI commands: `extract`, `check`, `list`, `purge`, `init`.
 - **FR-041**: When no command is given or the first argument is a flag, the tool MUST default to `extract`.
-- **FR-042**: `extract` MUST accept: `--packages`, `--output`, `--files`, `--content-regex`, `--force`, `--keep-existing`, `--no-gitignore`, `--unmanaged`, `--dry-run`, `--upgrade`, `--silent`, `--verbose`, `--presets`.
-- **FR-043**: `check` MUST accept: `--packages`, `--output`, `--files`, `--content-regex`, `--unmanaged`, `--presets`, `--verbose`. When `--unmanaged` is passed (or `entry.output.unmanaged` is true), those entries are silently excluded from the check scope — checking unmanaged files is a no-op. When `--presets` is passed, only entries whose preset tags overlap with the requested presets are checked.
+- **FR-042**: `extract` MUST accept: `--packages`, `--output`, `--files`, `--content-regex`, `--force`, `--keep-existing`, `--gitignore`, `--managed`, `--dry-run`, `--upgrade`, `--silent`, `--verbose`, `--presets`. All boolean flags accept `--flag`, `--flag=true`, or `--flag=false` forms.
+- **FR-043**: `check` MUST accept: `--packages`, `--output`, `--files`, `--content-regex`, `--managed`, `--presets`, `--verbose`. When `--managed=false` is passed (or `entry.output.unmanaged` is true), those entries are silently excluded from the check scope — checking unmanaged files is a no-op. When `--presets` is passed, only entries whose preset tags overlap with the requested presets are checked.
 - **FR-044**: `list` MUST accept: `--output`, `--verbose`. `list` MUST ignore `--presets` and always report all entries regardless of preset tags — it is informational and read-only.
 - **FR-045**: `purge` MUST accept: `--packages`, `--output`, `--presets`, `--dry-run`, `--silent`, `--verbose`. When `--presets` is passed, only entries whose preset tags overlap with the requested presets are purged.
 - **FR-046**: `init` MUST scaffold a publishable package with `package.json` and a minimal `bin` entry-point that uses the runner.
@@ -218,7 +218,7 @@ A developer wants to run a custom script automatically after every successful ex
 #### File Management
 
 - **FR-060**: After a successful extraction, the tool MUST write a `.npmdata` marker file in the output directory listing every managed file path, its source package name, and source package version.
-- **FR-061**: The tool MUST default to making managed files read-only so accidental edits are surfaced immediately (not applicable in `--unmanaged` mode).
+- **FR-061**: The tool MUST default to making managed files read-only so accidental edits are surfaced immediately (not applicable in `--managed=false` mode).
 - **FR-062**: Unless disabled, the tool MUST create or update a `.gitignore` file alongside each `.npmdata` marker, adding all managed file paths to it.
 - **FR-063**: On `purge`, the tool MUST: (1) delete all managed files for the targeted entries; (2) remove all symlinks that point into the purged output directory; (3) remove any empty directories remaining after deletion.
 
@@ -292,7 +292,7 @@ A developer wants to run a custom script automatically after every successful ex
 
 ### Session 2026-03-08 (continued)
 
-- Q: Should `check` skip entries whose output is `unmanaged` (either via `entry.output.unmanaged` or `--unmanaged` flag)? → A: Yes. Checking an unmanaged file is meaningless (no marker, no tracking). `check` silently excludes unmanaged entries. `--unmanaged` is a valid `check` flag with this effect.
+- Q: Should `check` skip entries whose output is `unmanaged` (either via `entry.output.unmanaged` or `--managed=false` flag)? → A: Yes. Checking an unmanaged file is meaningless (no marker, no tracking). `check` silently excludes unmanaged entries. `--managed=false` is a valid `check` flag with this effect.
 - Q: Should `list` and `purge` respect `--presets` filtering? → A: `list` ignores `--presets` (always lists all entries; it is informational and read-only). `purge` respects `--presets` (only purges entries matched by the active preset filter, matching v1 behaviour).
 - Q: What should the self-installable runner do when the hosting package has no `npmdata.sets` in its `package.json`? → A: Fall back to a single synthetic entry that extracts the package itself (`pkg.name`) into `output.path: '.'` with no file filtering. This is what makes `npx <package-name>` work out of the box with no config.
 - Q: Should `check` accept `--presets` to narrow its scope to preset-matching entries? → A: Yes. `check` accepts `--presets` and filters entries the same way as `extract` and `purge`. All stateful commands support preset scoping for consistency.
@@ -307,5 +307,5 @@ A developer wants to run a custom script automatically after every successful ex
 - Package manager detection (pnpm / yarn / npm) follows lock-file presence heuristics, same as the current implementation.
 - Binary file detection and copy behaviour follows the same rules as the current implementation.
 - The `.npmdata` marker file format (CSV rows of path, package name, package version) is preserved for compatibility with consumers who may have existing marker files.
-- `gitignore` management is enabled by default unless `--no-gitignore` is passed or the config value is explicitly `false`.
+- `gitignore` management is enabled by default unless `--gitignore=false` is passed or the config value is explicitly `false`.
 - Content-regex filtering skips binary files.

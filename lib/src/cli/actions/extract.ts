@@ -22,7 +22,7 @@ export async function runExtract(
 
   const parsed = parseArgv(argv);
 
-  // Build entries: --packages overrides config sets
+  // Entries built from argv (when --packages is present)
   let entries = buildEntriesFromArgv(parsed);
   if (!entries) {
     if (!config || config.sets.length === 0) {
@@ -30,7 +30,7 @@ export async function runExtract(
         'No packages specified during extract. Use --packages or a config file with sets.',
       );
     }
-    // Config-sourced entries need CLI flag overrides applied
+    // Entries built from config file. Then CLI flags overrides some config values (e.g. --dry-run, --verbose)
     entries = applyArgvOverrides(config.sets, parsed);
   }
 

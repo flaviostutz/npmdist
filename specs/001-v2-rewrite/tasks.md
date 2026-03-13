@@ -55,7 +55,7 @@ All source paths are relative to the repository root. New v2 code lives in `lib/
 **Independent Test**: Place a `.npmdatarc` in a temp dir, call `loadNpmdataConfig()`, verify the returned `NpmdataConfig` matches the file. Call argv helpers with raw process.argv fragments, verify correct typed output.
 
 - [X] T012 Implement `lib/src/v2/cli/config.ts` — `loadNpmdataConfig(cwd: string): Promise<NpmdataConfig | null>` using cosmiconfig; search sources in priority order: `.npmdatarc`, `.npmdatarc.json`, `.npmdatarc.yaml`, `.npmdatarc.js`, `npmdata.config.js`, `npmdata` key in `package.json` (FR-025)
-- [X] T013 [P] [US6] Implement `lib/src/v2/package/argv.ts` — helpers for parsing `--packages` (comma-split → `PackageConfig[]` via parsePackageSpec), `--output`, `--files` (comma-split), `--content-regex` (comma-split), `--presets` (comma-split), boolean flags (`--force`, `--keep-existing`, `--dry-run`, `--upgrade`, `--silent`, `--verbose`, `--unmanaged`, `--no-gitignore`); validate mutually exclusive pairs (FR-042 through FR-047)
+- [X] T013 [P] [US6] Implement `lib/src/v2/package/argv.ts` — helpers for parsing `--packages` (comma-split → `PackageConfig[]` via parsePackageSpec), `--output`, `--files` (comma-split), `--content-regex` (comma-split), `--presets` (comma-split), boolean flags (`--force`, `--keep-existing`, `--dry-run`, `--upgrade`, `--silent`, `--verbose`, `--managed`, `--gitignore`); validate mutually exclusive pairs (FR-042 through FR-047)
 - [X] T014 [P] [US6] Implement `lib/src/v2/package/argv.test.ts` — unit tests for each flag parser, mutual exclusion validation (`--force` + `--keep-existing` = error), `--packages` overriding config sets (FR-026)
 - [X] T015 [US6] Implement `lib/src/v2/cli/cli.ts` — top-level CLI router: call `loadNpmdataConfig`, detect command from argv[0] (default to `extract` when absent or starts with `-`), dispatch to appropriate command handler; handle `--help` and `--version` globally (FR-041)
 - [X] T016 [P] [US6] Implement `lib/src/v2/cli/usage.ts` — `printUsage(command: string): void` generating `--help` text for each of the 5 commands from cli-contract.md (FR-047)
@@ -68,7 +68,7 @@ All source paths are relative to the repository root. New v2 code lives in `lib/
 
 ## Phase 4: US1 — Extract Files from a Single npm Package (Priority: P1) 🎯 MVP
 
-**Goal**: `extract` command pulls files from a package into an output directory, writes `.npmdata` marker, updates `.gitignore`, enforces read-only on managed files, supports `--dry-run`, `--force`, `--keep-existing`, `--unmanaged`.
+**Goal**: `extract` command pulls files from a package into an output directory, writes `.npmdata` marker, updates `.gitignore`, enforces read-only on managed files, supports `--dry-run`, `--force`, `--keep-existing`, `--managed=false`.
 
 **Independent Test**: `node lib/dist/v2/main.js extract --packages my-pkg@1.0.0 --output ./output` (after `make build` in `lib/`) — verify expected files appear, `.npmdata` marker is written, files are read-only.
 

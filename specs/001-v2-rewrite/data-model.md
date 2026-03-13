@@ -172,7 +172,7 @@ type ProgressEvent =
 ```
 [absent]
     |-- extract (no conflict) --> [managed, read-only]
-    |-- extract --unmanaged  --> [written, not tracked]
+    |-- extract --managed=false  --> [written, not tracked]
 
 [managed, read-only]
     |-- extract (updated)    --> [managed, read-only, new content]
@@ -180,9 +180,9 @@ type ProgressEvent =
     |-- extract (removed from pkg) --> [absent, deleted at end of run]
 
 [written, not tracked]
-    |-- extract (no --unmanaged, no --force) --> CONFLICT, abort
+    |-- extract (no --managed=false, no --force) --> CONFLICT, abort
     |-- extract --force      --> [managed, read-only]
-    |-- extract --unmanaged  --> [skipped, left in place]
+    |-- extract --managed=false  --> [skipped, left in place]
 ```
 
 ### .npmdata Marker Lifecycle

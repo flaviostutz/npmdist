@@ -94,9 +94,10 @@ export async function execute(
     result.modified += 1;
   }
 
-  // Delete toDelete files (deferred — called by action-extract after all filesets)
-  // Here we just count them; actual deletion is done by the orchestrator
-  result.deleted = map.toDelete.length;
+  // Deletions are deferred: action-extract performs them after all filesets are
+  // processed and counts them independently via deferredDeletes.length.
+  // ExecuteResult.deleted is intentionally left at 0 here to avoid double-counting.
+  // result.deleted = 0; (already initialised to 0 above)
 
   // Update marker and gitignore
   if (!dryRun && !unmanaged) {

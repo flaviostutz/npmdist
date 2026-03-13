@@ -1,8 +1,11 @@
+/* eslint-disable no-undefined */
 import { PackageConfig, NpmdataExtractEntry, SelectorConfig, OutputConfig } from '../types';
 import { parsePackageSpec } from '../utils';
 
 /**
  * Parsed CLI flags for all commands.
+ * All flags are undefined when not supplied on the command line;
+ * defaults are applied downstream in the library.
  */
 export type ParsedArgv = {
   packages?: PackageConfig[];
@@ -11,14 +14,16 @@ export type ParsedArgv = {
   contentRegexes?: string[];
   presets?: string[];
   configFile?: string;
-  force: boolean;
-  keepExisting: boolean;
-  noGitignore: boolean;
-  unmanaged: boolean;
-  dryRun: boolean;
-  upgrade: boolean;
-  silent: boolean;
-  verbose: boolean;
+  force?: boolean;
+  keepExisting?: boolean;
+  /** --gitignore / --gitignore=true|false */
+  gitignore?: boolean;
+  /** --managed / --managed=true|false  (false ≡ unmanaged mode) */
+  managed?: boolean;
+  dryRun?: boolean;
+  upgrade?: boolean;
+  silent?: boolean;
+  verbose?: boolean;
 };
 
 /**
@@ -26,21 +31,26 @@ export type ParsedArgv = {
  * Validates mutually exclusive combinations and throws on invalid input.
  */
 export function parseArgv(argv: string[]): ParsedArgv {
-  const getFlag = (flag: string): boolean => argv.includes(flag);
+  const getBoolFlag = (flag: string): boolean | undefined => {
+    for (const arg of argv) {
+      if (arg === flag) return true;
+      if (arg === `${flag}=true`) return true;
+      if (arg === `${flag}=false`) return false;
+    }
+
+    return undefined;
+  };
   const getValue = (flag: string, shortFlag?: string): string | undefined => {
-    // eslint-disable-next-line no-undefined
     const idx = argv.findIndex((a) => a === flag || (shortFlag !== undefined && a === shortFlag));
     if (idx === -1 || idx + 1 >= argv.length) {
-      // eslint-disable-next-line no-undefined
       return undefined;
     }
     return argv[idx + 1];
   };
   const getCommaSplit = (flag: string, shortFlag?: string): string[] | undefined => {
     const val = getValue(flag, shortFlag);
-    // eslint-disable-next-line no-undefined
+
     if (val === undefined) {
-      // eslint-disable-next-line no-undefined
       return undefined;
     }
     return val
@@ -49,15 +59,17 @@ export function parseArgv(argv: string[]): ParsedArgv {
       .filter(Boolean);
   };
 
-  const force = getFlag('--force');
-  const keepExisting = getFlag('--keep-existing');
+  const force = getBoolFlag('--force');
+  const keepExisting = getBoolFlag('--keep-existing');
 
-  if (force && keepExisting) {
+  if (force === true && keepExisting === true) {
     throw new Error('--force and --keep-existing are mutually exclusive');
   }
 
   const packagesRaw = getCommaSplit('--packages');
   const packages = packagesRaw?.map((s) => parsePackageSpec(s));
+
+  const verboseFlag = getBoolFlag('--verbose');
 
   return {
     packages,
@@ -68,12 +80,12 @@ export function parseArgv(argv: string[]): ParsedArgv {
     configFile: getValue('--config'),
     force,
     keepExisting,
-    noGitignore: getFlag('--no-gitignore'),
-    unmanaged: getFlag('--unmanaged'),
-    dryRun: getFlag('--dry-run'),
-    upgrade: getFlag('--upgrade'),
-    silent: getFlag('--silent'),
-    verbose: getFlag('--verbose') || getFlag('-v'),
+    gitignore: getBoolFlag('--gitignore'),
+    managed: getBoolFlag('--managed'),
+    dryRun: getBoolFlag('--dry-run'),
+    upgrade: getBoolFlag('--upgrade'),
+    silent: getBoolFlag('--silent'),
+    verbose: argv.includes('-v') ? true : verboseFlag,
   };
 }
 
@@ -95,23 +107,24 @@ export function buildEntriesFromArgv(parsed: ParsedArgv): NpmdataExtractEntry[] 
   // which keeps --presets filtering working in this mode.
   // selector.presets is also forwarded to the target package's nested set extraction.
   if (parsed.presets) selector.presets = parsed.presets;
-  if (parsed.upgrade) selector.upgrade = true;
+
+  if (parsed.upgrade !== undefined) selector.upgrade = parsed.upgrade;
 
   const output: OutputConfig = {
-    path: parsed.output ?? '.',
-    force: parsed.force,
-    keepExisting: parsed.keepExisting,
-    gitignore: !parsed.noGitignore,
-    unmanaged: parsed.unmanaged,
-    dryRun: parsed.dryRun,
+    ...(parsed.output !== undefined ? { path: parsed.output } : {}),
+    ...(parsed.force !== undefined ? { force: parsed.force } : {}),
+    ...(parsed.keepExisting !== undefined ? { keepExisting: parsed.keepExisting } : {}),
+    ...(parsed.gitignore !== undefined ? { gitignore: parsed.gitignore } : {}),
+    ...(parsed.managed !== undefined ? { unmanaged: parsed.managed === false } : {}),
+    ...(parsed.dryRun !== undefined ? { dryRun: parsed.dryRun } : {}),
   };
 
   return parsed.packages.map((pkg) => ({
     package: pkg.version ? `${pkg.name}@${pkg.version}` : pkg.name,
     output,
     selector,
-    silent: parsed.silent,
-    verbose: parsed.verbose,
+    ...(parsed.silent !== undefined ? { silent: parsed.silent } : {}),
+    ...(parsed.verbose !== undefined ? { verbose: parsed.verbose } : {}),
   }));
 }
 
@@ -126,28 +139,28 @@ export function applyArgvOverrides(
   return entries.map((entry) => {
     const updatedOutput: OutputConfig = {
       ...entry.output,
-      // eslint-disable-next-line no-undefined
+
       ...(parsed.output !== undefined ? { path: parsed.output } : {}),
-      ...(parsed.force ? { force: true } : {}),
-      ...(parsed.keepExisting ? { keepExisting: true } : {}),
-      ...(parsed.noGitignore ? { gitignore: false } : {}),
-      ...(parsed.unmanaged ? { unmanaged: true } : {}),
-      ...(parsed.dryRun ? { dryRun: true } : {}),
+      ...(parsed.force !== undefined ? { force: parsed.force } : {}),
+      ...(parsed.keepExisting !== undefined ? { keepExisting: parsed.keepExisting } : {}),
+      ...(parsed.gitignore !== undefined ? { gitignore: parsed.gitignore } : {}),
+      ...(parsed.managed !== undefined ? { unmanaged: parsed.managed === false } : {}),
+      ...(parsed.dryRun !== undefined ? { dryRun: parsed.dryRun } : {}),
     };
 
     const updatedSelector: SelectorConfig = {
       ...entry.selector,
       ...(parsed.files ? { files: parsed.files } : {}),
       ...(parsed.contentRegexes ? { contentRegexes: parsed.contentRegexes } : {}),
-      ...(parsed.upgrade ? { upgrade: true } : {}),
+      ...(parsed.upgrade !== undefined ? { upgrade: parsed.upgrade } : {}),
     };
 
     return {
       ...entry,
       output: updatedOutput,
       selector: updatedSelector,
-      ...(parsed.silent ? { silent: true } : {}),
-      ...(parsed.verbose ? { verbose: true } : {}),
+      ...(parsed.silent !== undefined ? { silent: parsed.silent } : {}),
+      ...(parsed.verbose !== undefined ? { verbose: parsed.verbose } : {}),
     };
   });
 }

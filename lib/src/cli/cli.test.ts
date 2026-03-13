@@ -44,7 +44,7 @@ describe('cli', () => {
   it('defaults to extract command when no command given', async () => {
     const outputDir = path.join(tmpDir, 'output');
     await cli(
-      ['node', 'npmdata', '--packages', PKG_NAME, '--output', outputDir, '--no-gitignore'],
+      ['node', 'npmdata', '--packages', PKG_NAME, '--output', outputDir, '--gitignore=false'],
       tmpDir,
     );
     expect(fs.existsSync(path.join(outputDir, 'docs/guide.md'))).toBe(true);
@@ -54,7 +54,7 @@ describe('cli', () => {
   it('defaults to extract when first arg starts with -', async () => {
     const outputDir = path.join(tmpDir, 'output-flag');
     await cli(
-      ['node', 'npmdata', '--packages', PKG_NAME, '--output', outputDir, '--no-gitignore'],
+      ['node', 'npmdata', '--packages', PKG_NAME, '--output', outputDir, '--gitignore=false'],
       tmpDir,
     );
     expect(fs.existsSync(path.join(outputDir, 'docs/guide.md'))).toBe(true);
@@ -71,7 +71,7 @@ describe('cli', () => {
         PKG_NAME,
         '--output',
         outputDir,
-        '--no-gitignore',
+        '--gitignore=false',
       ],
       tmpDir,
     );
@@ -91,7 +91,7 @@ describe('cli', () => {
         PKG_NAME,
         '--output',
         outputDir,
-        '--no-gitignore',
+        '--gitignore=false',
       ],
       tmpDir,
     );
@@ -122,7 +122,7 @@ describe('cli', () => {
         PKG_NAME,
         '--output',
         outputDir,
-        '--no-gitignore',
+        '--gitignore=false',
       ],
       tmpDir,
     );
@@ -156,7 +156,7 @@ describe('cli', () => {
         PKG_NAME,
         '--output',
         outputDir,
-        '--no-gitignore',
+        '--gitignore=false',
       ],
       tmpDir,
     );
@@ -190,7 +190,7 @@ describe('cli', () => {
         PKG_NAME,
         '--output',
         outputDir,
-        '--no-gitignore',
+        '--gitignore=false',
       ],
       tmpDir,
     );

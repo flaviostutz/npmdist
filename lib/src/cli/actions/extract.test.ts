@@ -67,7 +67,7 @@ describe('runExtract — source selection', () => {
   it('uses CLI --packages entries when provided, ignoring config sets', async () => {
     await runExtract(
       CONFIG_WITH_SETS,
-      ['--packages', 'cli-pkg@2.0.0', '--output', './cli-out', '--no-gitignore'],
+      ['--packages', 'cli-pkg@2.0.0', '--output', './cli-out', '--gitignore=false'],
       '/cwd',
     );
     const { entries } = mockActionExtract.mock.calls[0][0];
@@ -127,9 +127,9 @@ describe('runExtract — CLI overrides applied to config entries', () => {
     expect(entries[0].output!.dryRun).toBe(true);
   });
 
-  it('overrides gitignore with --no-gitignore', async () => {
+  it('overrides gitignore with --gitignore=false', async () => {
     // Config entry has gitignore: true — CLI flag should override to false
-    await runExtract(CONFIG_WITH_SETS, ['--no-gitignore'], '/cwd');
+    await runExtract(CONFIG_WITH_SETS, ['--gitignore=false'], '/cwd');
     const { entries } = mockActionExtract.mock.calls[0][0];
     expect(entries[0].output!.gitignore).toBe(false);
   });
@@ -175,7 +175,7 @@ describe('runExtract — CLI --packages does not apply applyArgvOverrides redund
     // When --packages is used, flags are already baked in by buildEntriesFromArgv
     await runExtract(
       null,
-      ['--packages', 'cli-pkg', '--force', '--dry-run', '--silent', '--no-gitignore'],
+      ['--packages', 'cli-pkg', '--force', '--dry-run', '--silent', '--gitignore=false'],
       '/cwd',
     );
     const { entries } = mockActionExtract.mock.calls[0][0];

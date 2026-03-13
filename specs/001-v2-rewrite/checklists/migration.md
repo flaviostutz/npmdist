@@ -60,12 +60,12 @@
 
 *Are all required flows covered by acceptance scenarios?*
 
-- [ ] CHK022 - Is the `check --unmanaged` skip behaviour covered by an acceptance scenario (it is in FR-043 but absent from User Story 2 scenarios)? [Coverage, Spec §User Story 2]
+- [ ] CHK022 - Is the `check --managed=false` skip behaviour covered by an acceptance scenario (it is in FR-043 but absent from User Story 2 scenarios)? [Coverage, Spec §User Story 2]
 - [ ] CHK023 - Are acceptance scenarios for `list` and `purge` defined with `--presets` active (the new v2 behaviour where `purge` respects `--presets` and `list` does not)? [Coverage, Spec §User Story 4]
 - [ ] CHK024 - Is there an acceptance scenario for the self-installable runner no-config fallback (`npx <package-name>` with no `npmdata.sets`)? [Coverage, Spec §User Story 5, FR-051]
 - [ ] CHK025 - Is there an acceptance scenario covering the `check` `extra` drift case (files in package source absent from output and marker)? Scenario 6 exists but does it specify the exact exit code and reported file list? [Clarity, Spec §User Story 2 §6]
 - [ ] CHK026 - Is there an acceptance scenario for three-level recursive dependency extraction (SC-002 references it as a success criterion but no scenario covers the merged file-set output precisely)? [Coverage, SC-002]
-- [ ] CHK027 - Is there an acceptance scenario covering `--force` + `--unmanaged` combination (spec edge case says "unmanaged takes precedence") that verifies no error is thrown and existing files are NOT overwritten? [Coverage, Spec §Edge Cases]
+- [ ] CHK027 - Is there an acceptance scenario covering `--force` + `--managed=false` combination (spec edge case says "managed=false takes precedence") that verifies no error is thrown and existing files are NOT overwritten? [Coverage, Spec §Edge Cases]
 
 ---
 

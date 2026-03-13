@@ -130,7 +130,7 @@ describe('purgeFileset', () => {
     // Marker still exists and retains pkgB's entry
     expect(fs.existsSync(mPath)).toBe(true);
     const remaining = fs.readFileSync(mPath, 'utf8');
-    expect(remaining).toContain('pkgB.md,pkgB,1.0.0');
+    expect(remaining).toContain('pkgB.md|pkgB|1.0.0');
     expect(remaining).not.toContain('pkgA.md');
 
     // Purge pkgB's entries — marker becomes empty and is deleted

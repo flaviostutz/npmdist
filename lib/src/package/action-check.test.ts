@@ -447,4 +447,64 @@ describe('actionCheck', () => {
     expect(result.missing).not.toContain('parent.md');
     expect(result.missing).not.toContain('child.md');
   }, 60000);
+
+  it('does not report false positives when two packages share the same outputDir', async () => {
+    // Regression test for bug: existingMarker was not filtered by packageName before
+    // being passed to checkFileset, causing files owned by other packages in the same
+    // outputDir to be checked against the current package's source and falsely reported
+    // as extra or modified.
+    await installMockPackage('shared-pkg-a', '1.0.0', { 'a.md': 'AAA' }, tmpDir);
+    await installMockPackage('shared-pkg-b', '1.0.0', { 'b.md': 'BBB' }, tmpDir);
+
+    const sharedOutput = path.join(tmpDir, 'shared-out');
+    fs.mkdirSync(sharedOutput, { recursive: true });
+    fs.writeFileSync(path.join(sharedOutput, 'a.md'), 'AAA');
+    fs.writeFileSync(path.join(sharedOutput, 'b.md'), 'BBB');
+
+    // Both packages share the same output directory and marker file
+    await writeMarker(markerPath(sharedOutput), [
+      { path: 'a.md', packageName: 'shared-pkg-a', packageVersion: '1.0.0' },
+      { path: 'b.md', packageName: 'shared-pkg-b', packageVersion: '1.0.0' },
+    ]);
+
+    const entries: NpmdataExtractEntry[] = [
+      { package: 'shared-pkg-a@1.0.0', output: { path: sharedOutput } },
+      { package: 'shared-pkg-b@1.0.0', output: { path: sharedOutput } },
+    ];
+
+    const result = await actionCheck({ entries, cwd: tmpDir });
+    // b.md should not appear as extra/modified when checking shared-pkg-a
+    // a.md should not appear as extra/modified when checking shared-pkg-b
+    expect(result.missing).toHaveLength(0);
+    expect(result.modified).toHaveLength(0);
+    // extra may include things from respective package sources; we care that
+    // cross-package files are not falsely reported.
+    expect(result.extra).not.toContain('a.md'); // a.md is in shared-pkg-a's source
+    expect(result.extra).not.toContain('b.md'); // b.md is in shared-pkg-b's source
+  }, 60000);
+
+  it('reports only missing files owned by the queried package when it is not installed', async () => {
+    // Regression: when a package is not installed, all marker entries (including those
+    // from sibling packages) were reported as missing. Only entries for the queried
+    // package should be surfaced.
+    const sharedOutput = path.join(tmpDir, 'shared-out-missing');
+    fs.mkdirSync(sharedOutput, { recursive: true });
+
+    await writeMarker(markerPath(sharedOutput), [
+      { path: 'a.md', packageName: 'present-pkg', packageVersion: '1.0.0' },
+      { path: 'b.md', packageName: 'absent-pkg', packageVersion: '1.0.0' },
+    ]);
+
+    // Only absent-pkg is not installed; present-pkg IS installed (mock)
+    await installMockPackage('present-pkg', '1.0.0', { 'a.md': 'AAA' }, tmpDir);
+
+    const entries: NpmdataExtractEntry[] = [
+      { package: 'absent-pkg@1.0.0', output: { path: sharedOutput } },
+    ];
+
+    const result = await actionCheck({ entries, cwd: tmpDir });
+    expect(result.missing).toContain('b.md');
+    // a.md belongs to present-pkg — must NOT be reported as missing
+    expect(result.missing).not.toContain('a.md');
+  }, 60000);
 });

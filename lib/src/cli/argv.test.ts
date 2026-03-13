@@ -6,12 +6,15 @@ import { parseArgv, buildEntriesFromArgv, applyArgvOverrides } from './argv';
 describe('parseArgv', () => {
   it('parses --force flag', () => {
     expect(parseArgv(['--force']).force).toBe(true);
-    expect(parseArgv([]).force).toBe(false);
+    expect(parseArgv(['--force=true']).force).toBe(true);
+    expect(parseArgv(['--force=false']).force).toBe(false);
+    expect(parseArgv([]).force).toBeUndefined();
   });
 
   it('parses --keep-existing flag', () => {
     expect(parseArgv(['--keep-existing']).keepExisting).toBe(true);
-    expect(parseArgv([]).keepExisting).toBe(false);
+    expect(parseArgv(['--keep-existing=false']).keepExisting).toBe(false);
+    expect(parseArgv([]).keepExisting).toBeUndefined();
   });
 
   it('throws when --force and --keep-existing are both set', () => {
@@ -51,18 +54,29 @@ describe('parseArgv', () => {
   it('parses boolean flags', () => {
     const parsed = parseArgv([
       '--dry-run',
-      '--no-gitignore',
-      '--unmanaged',
+      '--gitignore=false',
+      '--managed=false',
       '--upgrade',
       '--silent',
       '--verbose',
     ]);
     expect(parsed.dryRun).toBe(true);
-    expect(parsed.noGitignore).toBe(true);
-    expect(parsed.unmanaged).toBe(true);
+    expect(parsed.gitignore).toBe(false);
+    expect(parsed.managed).toBe(false);
     expect(parsed.upgrade).toBe(true);
     expect(parsed.silent).toBe(true);
     expect(parsed.verbose).toBe(true);
+  });
+
+  it('parses --gitignore and --managed flags with values', () => {
+    expect(parseArgv(['--gitignore']).gitignore).toBe(true);
+    expect(parseArgv(['--gitignore=true']).gitignore).toBe(true);
+    expect(parseArgv(['--gitignore=false']).gitignore).toBe(false);
+    expect(parseArgv([]).gitignore).toBeUndefined();
+    expect(parseArgv(['--managed']).managed).toBe(true);
+    expect(parseArgv(['--managed=true']).managed).toBe(true);
+    expect(parseArgv(['--managed=false']).managed).toBe(false);
+    expect(parseArgv([]).managed).toBeUndefined();
   });
 
   it('parses -v as verbose', () => {
@@ -77,12 +91,16 @@ describe('parseArgv', () => {
     expect(parseArgv([]).configFile).toBeUndefined();
   });
 
-  it('returns all false when no flags set', () => {
+  it('returns undefined for all boolean flags when none are set', () => {
     const parsed = parseArgv([]);
-    expect(parsed.force).toBe(false);
-    expect(parsed.keepExisting).toBe(false);
-    expect(parsed.dryRun).toBe(false);
-    expect(parsed.verbose).toBe(false);
+    expect(parsed.force).toBeUndefined();
+    expect(parsed.keepExisting).toBeUndefined();
+    expect(parsed.dryRun).toBeUndefined();
+    expect(parsed.verbose).toBeUndefined();
+    expect(parsed.gitignore).toBeUndefined();
+    expect(parsed.managed).toBeUndefined();
+    expect(parsed.upgrade).toBeUndefined();
+    expect(parsed.silent).toBeUndefined();
   });
 });
 
@@ -99,10 +117,10 @@ describe('buildEntriesFromArgv', () => {
     expect(entries![0].output!.path).toBe('./out');
   });
 
-  it('defaults output path to "." when --output missing', () => {
+  it('leaves output path undefined when --output is not set', () => {
     const parsed = parseArgv(['--packages', 'my-pkg']);
     const entries = buildEntriesFromArgv(parsed);
-    expect(entries![0].output!.path).toBe('.');
+    expect(entries![0].output!.path).toBeUndefined();
   });
 });
 
@@ -171,16 +189,28 @@ describe('applyArgvOverrides', () => {
     expect(result[0].output!.keepExisting).toBe(true);
   });
 
-  it('applies --no-gitignore override', () => {
-    const parsed = parseArgv(['--no-gitignore', '--packages', 'test-pkg']);
+  it('applies --gitignore=false override', () => {
+    const parsed = parseArgv(['--gitignore=false', '--packages', 'test-pkg']);
     const result = applyArgvOverrides([baseEntry], parsed);
     expect(result[0].output!.gitignore).toBe(false);
   });
 
-  it('applies --unmanaged override', () => {
-    const parsed = parseArgv(['--unmanaged', '--packages', 'test-pkg']);
+  it('applies --gitignore=true override', () => {
+    const parsed = parseArgv(['--gitignore=true', '--packages', 'test-pkg']);
+    const result = applyArgvOverrides([baseEntry], parsed);
+    expect(result[0].output!.gitignore).toBe(true);
+  });
+
+  it('applies --managed=false override (sets unmanaged=true)', () => {
+    const parsed = parseArgv(['--managed=false', '--packages', 'test-pkg']);
     const result = applyArgvOverrides([baseEntry], parsed);
     expect(result[0].output!.unmanaged).toBe(true);
+  });
+
+  it('applies --managed=true override (sets unmanaged=false)', () => {
+    const parsed = parseArgv(['--managed=true', '--packages', 'test-pkg']);
+    const result = applyArgvOverrides([baseEntry], parsed);
+    expect(result[0].output!.unmanaged).toBe(false);
   });
 
   it('applies --dry-run override', () => {

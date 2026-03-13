@@ -22,8 +22,8 @@ Options:
   --content-regex <re>    Comma-separated regex strings for content filtering.
   --force                 Overwrite existing unmanaged files.
   --keep-existing         Skip files that already exist; create missing ones.
-  --no-gitignore          Disable .gitignore update alongside each marker.
-  --unmanaged             Write without .npmdata marker; no gitignore; no read-only.
+  --gitignore [bool]      Enable/disable .gitignore update (default: true). Use --gitignore=false to disable.
+  --managed [bool]        Enable/disable managed mode (default: true). Use --managed=false to write without .npmdata marker.
   --dry-run               Report changes without writing to disk.
   --upgrade               Force fresh package install even if satisfying version installed.
   --presets <tags>        Comma-separated preset tags; only matching entries are processed.
@@ -48,7 +48,7 @@ Options:
   --output, -o <dir>      Output directory path.
   --files <globs>         Glob patterns for file selection.
   --content-regex <re>    Regex strings for content filtering.
-  --unmanaged             Silently skip unmanaged entries.
+  --managed [bool]        Silently skip unmanaged entries. Use --managed=false.
   --presets <tags>        Comma-separated preset tags; only matching entries are checked.
   --config <file>         Path to a config file (overrides auto-discovered .npmdatarc / package.json).
   --verbose, -v           Print detailed comparison information.

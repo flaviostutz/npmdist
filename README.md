@@ -154,9 +154,9 @@ npx my-org-configs extract --output ./local-data --presets prod
 npx npmdata extract --packages my-pkg@^2.0.0 --output ./data   # specific version
 npx npmdata extract --packages "pkg-a,pkg-b@1.x" --output ./data  # multiple packages
 npx npmdata extract --packages my-pkg --output ./data --force   # overwrite unmanaged files
-npx npmdata extract --packages my-pkg --output ./data --unmanaged  # skip tracking
+npx npmdata extract --packages my-pkg --output ./data --managed=false  # skip tracking
 npx npmdata extract --packages my-pkg@latest --output ./data --upgrade  # force reinstall
-npx npmdata extract --packages my-pkg --output ./data --no-gitignore  # skip .gitignore
+npx npmdata extract --packages my-pkg --output ./data --gitignore=false  # skip .gitignore
 npx npmdata extract --packages my-pkg --output ./data --dry-run  # preview only
 ```
 
@@ -308,8 +308,8 @@ Extract:  --packages <specs>    Package specs (omit to read from config file)
           --content-regex <rx>  Filter files by content
           --force               Overwrite unmanaged/foreign files
           --keep-existing       Skip existing files
-          --no-gitignore        Skip .gitignore management
-          --unmanaged           Write without tracking
+          --gitignore [bool]    Disable .gitignore management when set to false
+          --managed [bool]      Write without tracking when set to false
           --dry-run             Preview without writing
           --upgrade             Reinstall even if present
           --presets <tags>      Only process entries matching these preset tags

@@ -28,6 +28,6 @@ export async function runInit(
     packages: packages?.map((p) => (p.version ? `${p.name}@${p.version}` : p.name)),
   };
 
-  await actionInit(outputDir, verbose, initConfig);
+  await actionInit(outputDir, verbose ?? false, initConfig);
   console.log('Init complete. Scaffolded package.json and bin/npmdata.js.');
 }

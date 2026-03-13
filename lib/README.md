@@ -112,7 +112,7 @@ Config is resolved using [cosmiconfig](https://github.com/cosmiconfig/cosmiconfi
 | `.npmdatarc.yaml` / `.npmdatarc.yml` | YAML object with `"sets"` array |
 | `npmdata.config.js` | CommonJS module exporting object with `sets` array |
 
-All runner flags (`--dry-run`, `--silent`, `--verbose`, `--no-gitignore`, `--unmanaged`, `--presets`, `--output`) work as usual.
+All runner flags (`--dry-run`, `--silent`, `--verbose`, `--gitignore=false`, `--managed=false`, `--presets`, `--output`) work as usual.
 
 **When to use:** When a consuming project wants to pin and automate a set of data extractions locally without publishing a separate data package. This is the lightest-weight approach — no extra package, no `init` step, just a config block and a single CLI call.
 
@@ -165,11 +165,11 @@ npx npmdata extract --packages my-shared-assets --content-regex "env: production
 npx npmdata extract --packages my-shared-assets --output ./data --force
 
 # skip .gitignore entries for managed files (gitignore is enabled by default)
-npx npmdata extract --packages my-shared-assets --output ./data --no-gitignore
+npx npmdata extract --packages my-shared-assets --output ./data --gitignore=false
 
 # write files without a .npmdata marker or .gitignore entry; files won't be read-only
 # and won't be tracked by npmdata; existing files are left unchanged
-npx npmdata extract --packages my-shared-assets --output ./data --unmanaged
+npx npmdata extract --packages my-shared-assets --output ./data --managed=false
 
 # preview what would change without writing any files
 npx npmdata extract --packages my-shared-assets --output ./data --dry-run
@@ -226,20 +226,20 @@ When calling the bin script bundled in a data package, the following options are
 |---|---|
 | `--output, -o <dir>` | Base directory for resolving all `output.path` values (default: cwd). |
 | `--presets <preset1,preset2>` | Limit to entries whose `presets` overlap with the given list (comma-separated). |
-| `--no-gitignore` | Disable `.gitignore` management for every entry, overriding each entry's `gitignore` field. |
-| `--unmanaged` | Run every entry in unmanaged mode, overriding each entry's `unmanaged` field. Files are written without a `.npmdata` marker, without `.gitignore` updates, and without being made read-only. |
+| `--gitignore [bool]` | Disable `.gitignore` management for every entry when set to `false`, overriding each entry's `gitignore` field. |
+| `--managed [bool]` | Run every entry in unmanaged mode when set to `false`, overriding each entry's `unmanaged` field. Files are written without a `.npmdata` marker, without `.gitignore` updates, and without being made read-only. |
 | `--dry-run` | Simulate changes without writing or deleting any files. |
 | `--verbose, -v` | Print detailed progress information for each step. |
 
 ```sh
 # disable gitignore management across all entries
-npx my-shared-assets --no-gitignore
+npx my-shared-assets --gitignore=false
 
 # write all files as unmanaged (editable, not tracked)
-npx my-shared-assets --unmanaged
+npx my-shared-assets --managed=false
 
 # combine overrides
-npx my-shared-assets --no-gitignore --unmanaged --dry-run
+npx my-shared-assets --gitignore=false --managed=false --dry-run
 ```
 
 ### npmdata entry options reference
@@ -462,10 +462,10 @@ Extract options:
   --force                  Overwrite existing unmanaged files or files owned by a different package
   --keep-existing          Skip files that already exist; create them when absent. Cannot be
                            combined with --force
-  --no-gitignore           Skip creating/updating .gitignore (gitignore is enabled by default)
-  --unmanaged              Write files without a .npmdata marker, .gitignore update, or read-only
-                           flag. Existing files are skipped. Files can be freely edited afterwards
-                           and are not tracked by npmdata.
+  --gitignore [bool]       Disable .gitignore management when set to false (enabled by default)
+  --managed [bool]         Set to false to write files without a .npmdata marker, .gitignore
+                           update, or read-only flag. Existing files are skipped. Files can be
+                           freely edited afterwards and are not tracked by npmdata.
   --files <patterns>       Comma-separated glob patterns to filter files
   --content-regex <regex>  Regex to filter files by content
   --dry-run                Preview changes without writing any files

@@ -9,7 +9,7 @@ import {
   ManagedFileMetadata,
   ContentReplacementConfig,
 } from '../types';
-import { hashFile } from '../utils';
+import { hashFile, isBinaryFile } from '../utils';
 import { applyContentReplacementsToBuffer } from '../package/content-replacements';
 
 import { enumeratePackageFiles } from './package-files';
@@ -96,13 +96,7 @@ export async function diff(
     }
 
     // Managed file — compare hashes
-    const srcContent = fs.readFileSync(srcPath);
-    const transformedContent = applyContentReplacementsToBuffer(
-      srcContent.toString(),
-      contentReplacements,
-    );
-    const srcHash = hashBuffer(transformedContent);
-
+    const srcHash = await hashSrcWithReplacements(srcPath, contentReplacements);
     const destHash = await hashFile(destPath);
 
     if (srcHash === destHash) {
@@ -130,7 +124,9 @@ async function hashSrcWithReplacements(
   srcPath: string,
   contentReplacements: ContentReplacementConfig[],
 ): Promise<string> {
-  if (contentReplacements.length === 0) return hashFile(srcPath);
+  // For binary files and when no replacements are configured, hash raw bytes
+  // so the result is consistent with hashFile() used for the destination.
+  if (contentReplacements.length === 0 || isBinaryFile(srcPath)) return hashFile(srcPath);
   const content = fs.readFileSync(srcPath, 'utf8');
   const transformed = applyContentReplacementsToBuffer(content, contentReplacements);
   return hashString(transformed);
@@ -138,8 +134,4 @@ async function hashSrcWithReplacements(
 
 function hashString(content: string): string {
   return crypto.createHash('sha256').update(content).digest('hex');
-}
-
-function hashBuffer(content: string): string {
-  return hashString(content);
 }

@@ -30,7 +30,7 @@ describe('readMarker', () => {
 
   it('parses CSV rows into ManagedFileMetadata entries', async () => {
     const mPath = path.join(tmpDir, '.npmdata');
-    fs.writeFileSync(mPath, 'README.md,mypkg,1.0.0\ndocs/guide.md,mypkg,1.0.0\n');
+    fs.writeFileSync(mPath, 'README.md|mypkg|1.0.0\ndocs/guide.md|mypkg|1.0.0\n');
     const result = await readMarker(mPath);
     expect(result).toHaveLength(2);
     expect(result[0]).toEqual({ path: 'README.md', packageName: 'mypkg', packageVersion: '1.0.0' });
@@ -43,7 +43,7 @@ describe('readMarker', () => {
 
   it('skips blank lines in marker file', async () => {
     const mPath = path.join(tmpDir, '.npmdata');
-    fs.writeFileSync(mPath, 'a.md,pkg,1.0.0\n\nb.md,pkg,1.0.0\n');
+    fs.writeFileSync(mPath, 'a.md|pkg|1.0.0\n\nb.md|pkg|1.0.0\n');
     const result = await readMarker(mPath);
     expect(result).toHaveLength(2);
   });
@@ -58,17 +58,28 @@ describe('readMarker', () => {
     expect(result[0].packageName).toBe('');
     expect(result[0].packageVersion).toBe('');
   });
+
+  it('correctly parses file paths that contain commas', async () => {
+    // Pipe separator means commas in file paths are never ambiguous.
+    const mPath = path.join(tmpDir, '.npmdata');
+    fs.writeFileSync(mPath, 'src/my,util.ts|mypkg|1.0.0\n');
+    const result = await readMarker(mPath);
+    expect(result).toHaveLength(1);
+    expect(result[0].path).toBe('src/my,util.ts');
+    expect(result[0].packageName).toBe('mypkg');
+    expect(result[0].packageVersion).toBe('1.0.0');
+  });
 });
 
 describe('writeMarker', () => {
-  it('creates a marker file with CSV rows and makes it read-only', async () => {
+  it('creates a marker file with pipe-separated rows and makes it read-only', async () => {
     const mPath = path.join(tmpDir, '.npmdata');
     await writeMarker(mPath, [
       { path: 'README.md', packageName: 'mypkg', packageVersion: '1.2.3' },
     ]);
     expect(fs.existsSync(mPath)).toBe(true);
     const content = fs.readFileSync(mPath, 'utf8');
-    expect(content).toContain('README.md,mypkg,1.2.3');
+    expect(content).toContain('README.md|mypkg|1.2.3');
     const stat = fs.statSync(mPath);
     // read-only: owner write bit should be off
 

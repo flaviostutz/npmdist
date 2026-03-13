@@ -39,15 +39,15 @@ npmdata [extract] [options]
 | `--output` | `-o` | `string` | — | Output directory path. Required when `--packages` is used. |
 | `--files` | | `string` | — | Comma-separated glob patterns for file selection. |
 | `--content-regex` | | `string` | — | Comma-separated regex strings for content filtering. |
-| `--force` | | `boolean` | `false` | Overwrite existing unmanaged files. |
-| `--keep-existing` | | `boolean` | `false` | Skip files that already exist; create missing ones. Mutually exclusive with `--force`. |
-| `--no-gitignore` | | `boolean` | `false` | Disable `.gitignore` update alongside each marker. |
-| `--unmanaged` | | `boolean` | `false` | Write without `.npmdata` marker; no gitignore; no read-only. Skips existing files. |
-| `--dry-run` | | `boolean` | `false` | Report changes without writing to disk. |
-| `--upgrade` | | `boolean` | `false` | Force fresh package install even if a satisfying version is installed. |
+| `--force` | | `boolean` | `undefined` | Overwrite existing unmanaged files. |
+| `--keep-existing` | | `boolean` | `undefined` | Skip files that already exist; create missing ones. Mutually exclusive with `--force`. |
+| `--gitignore` | | `boolean` | `undefined` | Disable `.gitignore` update alongside each marker when set to `false`. |
+| `--managed` | | `boolean` | `undefined` | Write without `.npmdata` marker; no gitignore; no read-only when set to `false`. Skips existing files. |
+| `--dry-run` | | `boolean` | `undefined` | Report changes without writing to disk. |
+| `--upgrade` | | `boolean` | `undefined` | Force fresh package install even if a satisfying version is installed. |
 | `--presets` | | `string` | — | Comma-separated preset tags; only matching entries are processed. |
-| `--silent` | | `boolean` | `false` | Suppress per-file output; print only final summary line. |
-| `--verbose` | `-v` | `boolean` | `false` | Print detailed step information. |
+| `--silent` | | `boolean` | `undefined` | Suppress per-file output; print only final summary line. |
+| `--verbose` | `-v` | `boolean` | `undefined` | Print detailed step information. |
 
 **Exit codes**:
 - `0` — extraction complete (including dry-run with no errors)
@@ -73,9 +73,9 @@ npmdata check [options]
 | `--output` | `-o` | `string` | — | Output directory path. |
 | `--files` | | `string` | — | Glob patterns for file selection. |
 | `--content-regex` | | `string` | — | Regex strings for content filtering. |
-| `--unmanaged` | | `boolean` | `false` | Silently skip unmanaged entries (meaningless to check). |
+| `--managed` | | `boolean` | `undefined` | Silently skip unmanaged entries when set to `false` (meaningless to check). |
 | `--presets` | | `string` | — | Comma-separated preset tags; only matching entries are checked. |
-| `--verbose` | `-v` | `boolean` | `false` | Print detailed comparison information. |
+| `--verbose` | `-v` | `boolean` | `undefined` | Print detailed comparison information. |
 
 **Exit codes**:
 - `0` — all managed files in sync
@@ -187,7 +187,7 @@ The runner:
 | Combination | Behaviour |
 |-------------|-----------|
 | `--force` + `--keep-existing` | Validation error before any work; exit 1 |
-| `--force` + `--unmanaged` | `--unmanaged` takes precedence; no error |
+| `--force` + `--managed=false` | `--managed=false` takes precedence; no error |
 | `--dry-run` ignores `postExtractScript` | Script is never executed during dry-run |
 | `--packages` overrides config file `sets` | Config file sets entirely replaced by `--packages` value |
 

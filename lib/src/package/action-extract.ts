@@ -320,6 +320,8 @@ export async function actionExtract(options: ExtractOptions): Promise<ExtractRes
       );
     }
     await rollback(allNewlyCreated);
+    // Ensure temp package.json is cleaned up even on failure
+    cleanupTempPackageJson(cwd, verbose);
     throw error;
   }
 

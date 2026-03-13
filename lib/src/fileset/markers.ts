@@ -8,8 +8,8 @@ import { MARKER_FILE } from './constants';
 
 /**
  * Read all managed file entries from a .npmdata marker file.
- * CSV format: path,packageName,packageVersion — one row per file, no header.
- * Compatible with v1 marker files.
+ * Format: path|packageName|packageVersion — one row per file, no header.
+ * Pipe is used as separator so file paths containing commas are handled safely.
  */
 export async function readMarker(markerFilePath: string): Promise<ManagedFileMetadata[]> {
   if (!fs.existsSync(markerFilePath)) {
@@ -18,7 +18,7 @@ export async function readMarker(markerFilePath: string): Promise<ManagedFileMet
   const content = fs.readFileSync(markerFilePath, 'utf8');
   const lines = content.split('\n').filter((line) => line.trim() !== '');
   return lines.map((line) => {
-    const fields = line.split(',');
+    const fields = line.split('|');
     return {
       path: fields[0] ?? '',
       packageName: fields[1] ?? '',
@@ -29,7 +29,7 @@ export async function readMarker(markerFilePath: string): Promise<ManagedFileMet
 
 /**
  * Write managed file entries to a .npmdata marker file.
- * CSV format: path,packageName,packageVersion — one row per file, no header.
+ * Format: path|packageName|packageVersion — one row per file, no header.
  * Makes the file read-only after writing.
  */
 export async function writeMarker(
@@ -48,7 +48,7 @@ export async function writeMarker(
     }
     return;
   }
-  const rows = entries.map((e) => `${e.path},${e.packageName},${e.packageVersion}`);
+  const rows = entries.map((e) => `${e.path}|${e.packageName}|${e.packageVersion}`);
   fs.writeFileSync(markerFilePath, `${rows.join('\n')}\n`, 'utf8');
   fs.chmodSync(markerFilePath, 0o444);
 }

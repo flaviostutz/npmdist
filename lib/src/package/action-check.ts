@@ -77,13 +77,16 @@ export async function actionCheck(options: CheckOptions): Promise<CheckSummary> 
     // Check if package is installed
     const pkgPath = getInstalledPackagePath(pkg.name, cwd);
 
-    // Read existing marker
-
+    // Read existing marker and filter to entries owned by this package only.
+    // Multiple packages may share the same outputDir; passing the full marker to
+    // checkFileset would cause files owned by other packages to be checked against
+    // the current package's source, producing false positives.
     const existingMarker = await readOutputDirMarker(outputDir);
+    const pkgMarker = existingMarker.filter((m) => m.packageName === pkg.name);
 
     if (!pkgPath) {
       console.error(`Package ${pkg.name} is not installed. Run 'extract' first.`);
-      summary.missing.push(...existingMarker.map((m) => m.path));
+      summary.missing.push(...pkgMarker.map((m) => m.path));
       continue;
     }
 
@@ -92,7 +95,7 @@ export async function actionCheck(options: CheckOptions): Promise<CheckSummary> 
       outputDir,
       entry.selector ?? {},
       entry.output ?? {},
-      existingMarker,
+      pkgMarker,
     );
 
     summary.missing.push(...result.missing);

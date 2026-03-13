@@ -11,7 +11,7 @@ This is an example **consumer** project. It installs `example-files-package` (th
 pnpm exec example-files-package extract --files "docs/**/*"
 
 # extract without writing .gitignore entries
-pnpm exec example-files-package extract --files "docs/**/*" --no-gitignore
+pnpm exec example-files-package extract --files "docs/**/*" --gitignore=false
 
 # preview what would change before writing anything
 pnpm exec example-files-package extract --files "docs/**/*" --dry-run

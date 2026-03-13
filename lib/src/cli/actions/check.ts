@@ -35,7 +35,7 @@ export async function runCheck(
     cwd,
     presets: parsed.presets ?? [],
     verbose: parsed.verbose,
-    skipUnmanaged: parsed.unmanaged,
+    skipUnmanaged: parsed.managed === false,
   });
 
   const hasDrift =

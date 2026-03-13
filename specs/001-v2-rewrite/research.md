@@ -200,7 +200,7 @@ Clarification session 2026-03-08 Q3 (second session). This is what makes `npx <p
 ## 10. check + unmanaged Behaviour
 
 ### Decision
-`check` silently skips entries where `output.unmanaged === true` or `--unmanaged` flag is set. `--unmanaged` is accepted as a valid `check` flag.
+`check` silently skips entries where `output.unmanaged === true` or `--managed=false` flag is set. `--managed=false` is accepted as a valid `check` flag.
 
 ### Rationale
 Clarification session 2026-03-08 Q1 (second session). Checking unmanaged files is meaningless (no marker, no read-only enforcement). Matches v1 `action-check.ts` `managedEntries` filter.
