@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.18.2 (2026-03-13)
+
+### Maintenance
+
+* release: 0.18.1 [[b5a0c88](https://github.com/flaviostutz/npmdata/commit/b5a0c8860a79d8cb733063cb610277c94078ed29)]
+* enhancing tests [[14f4e4c](https://github.com/flaviostutz/npmdata/commit/14f4e4cc819f3ec797de385a802b7e5fa9ef89e1)]
+
+### Misc
+
+
+### Info
+
+* Authors: Flavio Stutz <flaviostutz@gmail.com>
+
+
 ## 0.18.1 (2026-03-13)
 
 ### Maintenance
