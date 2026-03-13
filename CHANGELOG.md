@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.17.0 (2026-03-12)
+
+### Features
+
+* change marker to pipe [[d6dcb78](https://github.com/flaviostutz/npmdata/commit/d6dcb7825527fcbfc32760e7f11de68182c9636c)]
+
+### Maintenance
+
+* release: 0.16.0 [[8493058](https://github.com/flaviostutz/npmdata/commit/8493058ac589a4294a5ff18a380d3b8f5084e2ff)]
+* fix hierarchy of gitignore and unmanaged options [[5f258a0](https://github.com/flaviostutz/npmdata/commit/5f258a0ad2723a91cf19c731fd79bbcc14941330)]
+* increate unit tests [[9b22ddb](https://github.com/flaviostutz/npmdata/commit/9b22ddb47209a5d4fba39f94e7eac5e147549ee3)]
+* make check and purge hierarchical [[d10d8b3](https://github.com/flaviostutz/npmdata/commit/d10d8b3b88ebfcc394ec62dc613a6776b78bfc20)]
+* small fixes [[835f582](https://github.com/flaviostutz/npmdata/commit/835f5823b86c11113de09d771453ba97929960ab)]
+* test fix [[42d8d54](https://github.com/flaviostutz/npmdata/commit/42d8d547d59d6bc10619db4214d2886ff1bf70c9)]
+
+### Misc
+
+
+### Info
+
+* Authors: Flavio Stutz <flaviostutz@gmail.com>
+
+
 ## 0.16.0 (2026-03-12)
 
 ### Features
