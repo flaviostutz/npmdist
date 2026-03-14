@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.18.3 (2026-03-13)
+
+### Maintenance
+
+* release: 0.18.2 [[5b310de](https://github.com/flaviostutz/npmdata/commit/5b310de1afd8bb5f2ecb32c4a895e4bcf484b516)]
+* fix binpkg while loading config [[a5337fe](https://github.com/flaviostutz/npmdata/commit/a5337fe8618848bab2dd5e88925c3688f2d668ab)]
+
+### Misc
+
+
+### Info
+
+* Authors: Flavio Stutz <flaviostutz@gmail.com>
+
+
 ## 0.18.2 (2026-03-13)
 
 ### Maintenance
